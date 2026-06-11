@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://filmclub:filmclub@localhost:5432/filmclub"
 
     tmdb_api_key: str = ""
+    tmdb_access_token: str = ""
     tmdb_base_url: str = "https://api.themoviedb.org/3"
     tmdb_image_base_url: str = "https://image.tmdb.org/t/p"
 
