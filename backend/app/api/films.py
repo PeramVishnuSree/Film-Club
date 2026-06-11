@@ -22,7 +22,7 @@ from app.schemas.film import (
     NamedRef,
     ProviderOut,
 )
-from app.services.film_cache import _parse_date, get_or_cache_film
+from app.services.film_cache import get_or_cache_film
 from app.services.tmdb import TMDBClient
 
 router = APIRouter(prefix="/films", tags=["films"])
@@ -34,17 +34,7 @@ async def search_films(
     tmdb: TMDBClient = Depends(get_tmdb),
 ) -> list[FilmSummary]:
     data = await tmdb.search_movies(q)
-    return [
-        FilmSummary(
-            tmdb_id=r["id"],
-            title=r.get("title") or r.get("name") or "",
-            release_date=_parse_date(r.get("release_date")),
-            overview=r.get("overview"),
-            poster_path=r.get("poster_path"),
-            vote_average=r.get("vote_average"),
-        )
-        for r in data.get("results", [])
-    ]
+    return [FilmSummary.from_tmdb(r) for r in data.get("results", [])]
 
 
 @router.get("/{tmdb_id}", response_model=FilmDetail)

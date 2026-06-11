@@ -1,6 +1,16 @@
 from datetime import date
+from typing import Any
 
 from pydantic import BaseModel
+
+
+def _parse_date(value: str | None) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
 
 
 class FilmSummary(BaseModel):
@@ -10,6 +20,17 @@ class FilmSummary(BaseModel):
     overview: str | None = None
     poster_path: str | None = None
     vote_average: float | None = None
+
+    @classmethod
+    def from_tmdb(cls, data: dict[str, Any]) -> "FilmSummary":
+        return cls(
+            tmdb_id=data["id"],
+            title=data.get("title") or data.get("name") or "",
+            release_date=_parse_date(data.get("release_date")),
+            overview=data.get("overview"),
+            poster_path=data.get("poster_path"),
+            vote_average=data.get("vote_average"),
+        )
 
 
 class NamedRef(BaseModel):

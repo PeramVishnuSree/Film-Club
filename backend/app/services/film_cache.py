@@ -49,6 +49,39 @@ def _is_fresh(film: Film) -> bool:
     return datetime.now(timezone.utc) - synced < CACHE_TTL
 
 
+def _film_summary_fields(data: dict[str, Any]) -> dict[str, Any]:
+    return dict(
+        tmdb_id=data["id"],
+        media_type="movie",
+        title=data.get("title") or data.get("name") or "",
+        original_title=data.get("original_title"),
+        overview=data.get("overview"),
+        release_date=_parse_date(data.get("release_date")),
+        original_language=data.get("original_language"),
+        poster_path=data.get("poster_path"),
+        backdrop_path=data.get("backdrop_path"),
+        popularity=data.get("popularity"),
+        vote_average=data.get("vote_average"),
+        vote_count=data.get("vote_count"),
+    )
+
+
+async def upsert_film_summary(session: AsyncSession, data: dict[str, Any]) -> int:
+    """Insert/refresh a lightweight film row (no credits/keywords/providers).
+
+    Used to seed lists in bulk without a full detail fetch per film. Leaves
+    tmdb_synced_at untouched so a later detail view still enriches the row.
+    Returns the local film id.
+    """
+    fields = _film_summary_fields(data)
+    stmt = pg_insert(Film).values(**fields)
+    update_cols = {key: stmt.excluded[key] for key in fields if key != "tmdb_id"}
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[Film.tmdb_id], set_=update_cols
+    ).returning(Film.id)
+    return (await session.execute(stmt)).scalar_one()
+
+
 async def get_or_cache_film(
     session: AsyncSession, client: TMDBClient, tmdb_id: int, region: str = "US"
 ) -> Film:

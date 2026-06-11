@@ -45,3 +45,8 @@ class TMDBClient:
         resp = await self._client.get(f"/trending/movie/{window}")
         resp.raise_for_status()
         return resp.json()
+
+    async def top_rated_movies(self, page: int = 1) -> dict[str, Any]:
+        resp = await self._client.get("/movie/top_rated", params={"page": page})
+        resp.raise_for_status()
+        return resp.json()
