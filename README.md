@@ -30,6 +30,7 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env        # then add your TMDB_API_KEY and DATABASE_URL
+alembic upgrade head        # create the database schema
 uvicorn app.main:app --reload
 ```
 
