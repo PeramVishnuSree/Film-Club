@@ -50,7 +50,7 @@ export default function DiaryPage() {
               <div className="min-w-0 flex-1">
                 <Link
                   href={`/film/${e.film_tmdb_id}`}
-                  className="font-medium hover:text-emerald-400"
+                  className="font-medium hover:text-orange-400"
                 >
                   {e.film_title}
                 </Link>

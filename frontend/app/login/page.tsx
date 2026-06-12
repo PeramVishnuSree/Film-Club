@@ -36,26 +36,26 @@ export default function LoginPage() {
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
           placeholder="Username or email"
-          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 outline-none focus:border-emerald-400"
+          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 outline-none focus:border-orange-400"
         />
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
-          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 outline-none focus:border-emerald-400"
+          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 outline-none focus:border-orange-400"
         />
         {error && <p className="text-sm text-red-400">{error}</p>}
         <button
           disabled={busy}
-          className="w-full rounded-md bg-emerald-500 px-3 py-2 font-medium text-black hover:bg-emerald-400 disabled:opacity-50"
+          className="w-full rounded-md bg-orange-500 px-3 py-2 font-medium text-black hover:bg-orange-400 disabled:opacity-50"
         >
           {busy ? "Logging in…" : "Log in"}
         </button>
       </form>
       <p className="mt-4 text-sm text-white/60">
         No account?{" "}
-        <Link href="/signup" className="text-emerald-400 hover:underline">
+        <Link href="/signup" className="text-orange-400 hover:underline">
           Sign up
         </Link>
       </p>

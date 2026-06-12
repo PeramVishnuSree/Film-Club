@@ -24,15 +24,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!getToken()) {
-      setLoading(false);
-      return;
-    }
-    api
-      .me()
-      .then(setUser)
+    let active = true;
+    const session = getToken()
+      ? api.me().then((u) => {
+          if (active) setUser(u);
+        })
+      : Promise.resolve();
+    session
       .catch(() => clearToken())
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   async function login(identifier: string, password: string) {

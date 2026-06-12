@@ -84,7 +84,7 @@ export default function FilmActions({
           onClick={toggleWatchlist}
           className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${
             state.watchlisted
-              ? "bg-emerald-500/20 text-emerald-300"
+              ? "bg-orange-500/20 text-orange-300"
               : "border border-white/15 hover:bg-white/5"
           }`}
         >
@@ -129,7 +129,7 @@ export default function FilmActions({
             className="w-full rounded border border-white/15 bg-white/5 px-2 py-1 text-sm"
             rows={2}
           />
-          <button className="w-full rounded bg-emerald-500 px-3 py-1.5 text-sm font-medium text-black hover:bg-emerald-400">
+          <button className="w-full rounded bg-orange-500 px-3 py-1.5 text-sm font-medium text-black hover:bg-orange-400">
             Save entry
           </button>
         </form>
@@ -157,7 +157,7 @@ export default function FilmActions({
         </button>
       </form>
 
-      {msg && <p className="text-xs text-emerald-400">{msg}</p>}
+      {msg && <p className="text-xs text-orange-400">{msg}</p>}
     </div>
   );
 }

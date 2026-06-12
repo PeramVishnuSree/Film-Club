@@ -54,6 +54,39 @@ async def get_film(
     return await _build_film_detail(session, film, region)
 
 
+@router.get("/{tmdb_id}/providers", response_model=list[ProviderOut])
+async def get_film_providers(
+    tmdb_id: int,
+    region: str = "US",
+    session: AsyncSession = Depends(get_session),
+    tmdb: TMDBClient = Depends(get_tmdb),
+) -> list[ProviderOut]:
+    """Lightweight watch-provider lookup used for poster hover previews."""
+    try:
+        film = await get_or_cache_film(session, tmdb, tmdb_id, region)
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            raise HTTPException(status_code=404, detail="Film not found on TMDB") from exc
+        raise HTTPException(status_code=502, detail="TMDB request failed") from exc
+
+    providers = (
+        await session.execute(
+            select(FilmWatchProvider)
+            .where(FilmWatchProvider.film_id == film.id)
+            .where(FilmWatchProvider.region == region)
+        )
+    ).scalars().all()
+    return [
+        ProviderOut(
+            provider_id=p.provider_id,
+            provider_name=p.provider_name,
+            logo_path=p.logo_path,
+            offer_type=p.offer_type,
+        )
+        for p in providers
+    ]
+
+
 async def _build_film_detail(session: AsyncSession, film: Film, region: str) -> FilmDetail:
     genres = (
         await session.execute(

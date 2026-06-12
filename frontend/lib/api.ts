@@ -3,6 +3,7 @@ import type {
   FilmDetail,
   FilmMeState,
   FilmSummary,
+  Provider,
   RankedFilm,
   Review,
   Token,
@@ -91,6 +92,9 @@ export const api = {
   film: (tmdbId: number) => request<FilmDetail>(`/films/${tmdbId}`),
 
   filmState: (tmdbId: number) => request<FilmMeState>(`/films/${tmdbId}/me`),
+
+  filmProviders: (tmdbId: number, region = "US") =>
+    request<Provider[]>(`/films/${tmdbId}/providers?region=${region}`),
 
   // ---- library
   setRating: (tmdbId: number, value: number) =>

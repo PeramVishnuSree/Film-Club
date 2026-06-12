@@ -19,7 +19,10 @@ export default function Navbar() {
     <header className="border-b border-white/10 bg-black/30 backdrop-blur sticky top-0 z-10">
       <nav className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3">
         <Link href="/" className="text-lg font-bold tracking-tight">
-          Film<span className="text-emerald-400">Club</span>
+          Film<span className="text-orange-400">Club</span>
+        </Link>
+        <Link href="/trending" className="text-sm text-white/70 hover:text-white">
+          Trending
         </Link>
         <Link href="/top500" className="text-sm text-white/70 hover:text-white">
           Top 500
@@ -34,7 +37,7 @@ export default function Navbar() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search films…"
-            className="w-40 rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-sm outline-none focus:border-emerald-400 sm:w-56"
+            className="w-40 rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-sm outline-none focus:border-orange-400 sm:w-56"
           />
         </form>
         {user ? (
@@ -54,7 +57,7 @@ export default function Navbar() {
             </Link>
             <Link
               href="/signup"
-              className="rounded-md bg-emerald-500 px-3 py-1.5 text-sm font-medium text-black hover:bg-emerald-400"
+              className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-black hover:bg-orange-400"
             >
               Sign up
             </Link>

@@ -146,7 +146,7 @@ export default function FilmPage() {
           />
         ) : (
           <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-sm text-white/60">
-            <Link href="/login" className="text-emerald-400 hover:underline">
+            <Link href="/login" className="text-orange-400 hover:underline">
               Log in
             </Link>{" "}
             to rate, log, and review.

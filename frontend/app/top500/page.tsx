@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import FilmGrid from "@/components/FilmGrid";
 import { api } from "@/lib/api";
 import type { RankedFilm } from "@/lib/types";
@@ -13,16 +13,29 @@ export default function Top500Page() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Track offsets already requested so React Strict Mode's double-invoke
+  // (and any rapid clicks) can't append the same page twice.
+  const requested = useRef<Set<number>>(new Set());
 
   useEffect(() => {
+    if (requested.current.has(offset)) return;
+    requested.current.add(offset);
+
     setLoading(true);
     api
       .top500(PAGE_SIZE, offset)
       .then((batch) => {
-        setFilms((prev) => [...prev, ...batch]);
+        setFilms((prev) => {
+          const seen = new Set(prev.map((f) => f.tmdb_id));
+          const fresh = batch.filter((f) => !seen.has(f.tmdb_id));
+          return [...prev, ...fresh];
+        });
         if (batch.length < PAGE_SIZE) setDone(true);
       })
-      .catch(() => setError("Could not load the Top 500."))
+      .catch(() => {
+        setError("Could not load the Top 500.");
+        requested.current.delete(offset); // allow a retry
+      })
       .finally(() => setLoading(false));
   }, [offset]);
 

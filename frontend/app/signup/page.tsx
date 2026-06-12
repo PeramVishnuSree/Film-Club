@@ -50,39 +50,39 @@ export default function SignupPage() {
           value={form.username}
           onChange={update("username")}
           placeholder="Username"
-          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 outline-none focus:border-emerald-400"
+          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 outline-none focus:border-orange-400"
         />
         <input
           value={form.display_name}
           onChange={update("display_name")}
           placeholder="Display name (optional)"
-          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 outline-none focus:border-emerald-400"
+          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 outline-none focus:border-orange-400"
         />
         <input
           type="email"
           value={form.email}
           onChange={update("email")}
           placeholder="Email"
-          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 outline-none focus:border-emerald-400"
+          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 outline-none focus:border-orange-400"
         />
         <input
           type="password"
           value={form.password}
           onChange={update("password")}
           placeholder="Password (min 8 chars)"
-          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 outline-none focus:border-emerald-400"
+          className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 outline-none focus:border-orange-400"
         />
         {error && <p className="text-sm text-red-400">{error}</p>}
         <button
           disabled={busy}
-          className="w-full rounded-md bg-emerald-500 px-3 py-2 font-medium text-black hover:bg-emerald-400 disabled:opacity-50"
+          className="w-full rounded-md bg-orange-500 px-3 py-2 font-medium text-black hover:bg-orange-400 disabled:opacity-50"
         >
           {busy ? "Creating…" : "Sign up"}
         </button>
       </form>
       <p className="mt-4 text-sm text-white/60">
         Already have an account?{" "}
-        <Link href="/login" className="text-emerald-400 hover:underline">
+        <Link href="/login" className="text-orange-400 hover:underline">
           Log in
         </Link>
       </p>

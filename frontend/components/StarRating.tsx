@@ -25,7 +25,7 @@ export default function StarRating({
             <span className="absolute inset-0 text-2xl text-white/20">★</span>
             {(full || half) && (
               <span
-                className="absolute inset-0 overflow-hidden text-2xl text-emerald-400"
+                className="absolute inset-0 overflow-hidden text-2xl text-orange-400"
                 style={{ width: half ? "50%" : "100%" }}
               >
                 ★
