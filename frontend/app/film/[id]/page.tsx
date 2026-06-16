@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import AddToListButton from "@/components/AddToListButton";
 import FilmActions from "@/components/FilmActions";
 import ReviewsSection from "@/components/ReviewsSection";
 import { api, logoUrl, posterUrl } from "@/lib/api";
@@ -137,13 +138,16 @@ export default function FilmPage() {
         </div>
       </div>
 
-      <aside>
+      <aside className="space-y-4">
         {authLoading ? null : user && state ? (
-          <FilmActions
-            tmdbId={tmdbId}
-            initial={state}
-            onReviewed={() => setReviewKey((k) => k + 1)}
-          />
+          <>
+            <FilmActions
+              tmdbId={tmdbId}
+              initial={state}
+              onReviewed={() => setReviewKey((k) => k + 1)}
+            />
+            <AddToListButton tmdbId={tmdbId} />
+          </>
         ) : (
           <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-sm text-white/60">
             <Link href="/login" className="text-orange-400 hover:underline">
