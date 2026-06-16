@@ -156,6 +156,9 @@ export const api = {
   reviews: (tmdbId: number) => request<Review[]>(`/films/${tmdbId}/reviews`),
 
   // ---- social
+  searchUsers: (q: string) =>
+    request<UserCard[]>(`/users/search?q=${encodeURIComponent(q)}`),
+
   profile: (username: string) => request<Profile>(`/users/${username}`),
 
   userActivity: (username: string, limit = 30, offset = 0) =>

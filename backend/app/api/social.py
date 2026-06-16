@@ -80,6 +80,31 @@ async def _build_feed(
     ]
 
 
+# ------------------------------------------------------------------ search
+
+
+@router.get("/users/search", response_model=list[UserCard])
+async def search_users(
+    q: str = Query(min_length=1, max_length=80),
+    session: AsyncSession = Depends(get_session),
+    limit: int = Query(default=20, le=50),
+) -> list[UserCard]:
+    """Find people by username or display name (case-insensitive substring)."""
+    term = f"%{q.strip()}%"
+    rows = (
+        await session.execute(
+            select(User)
+            .where(
+                func.lower(User.username).like(func.lower(term))
+                | func.lower(func.coalesce(User.display_name, "")).like(func.lower(term))
+            )
+            .order_by(User.username)
+            .limit(limit)
+        )
+    ).scalars().all()
+    return [UserCard.model_validate(u) for u in rows]
+
+
 # ------------------------------------------------------------------ profile
 
 
