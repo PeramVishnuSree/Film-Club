@@ -35,6 +35,9 @@ export default function Navbar() {
             <Link href="/watchlist" className="text-sm text-white/70 hover:text-white">
               Watchlist
             </Link>
+            <Link href="/lists" className="text-sm text-white/70 hover:text-white">
+              Lists
+            </Link>
             <Link href="/diary" className="text-sm text-white/70 hover:text-white">
               Diary
             </Link>

@@ -5,9 +5,10 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import ActivityItem from "@/components/ActivityItem";
 import FollowButton from "@/components/FollowButton";
+import ListCard from "@/components/ListCard";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { FeedItem, Profile } from "@/lib/types";
+import type { FeedItem, ListSummary, Profile } from "@/lib/types";
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
@@ -25,6 +26,7 @@ export default function ProfilePage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activity, setActivity] = useState<FeedItem[] | null>(null);
+  const [lists, setLists] = useState<ListSummary[]>([]);
   const [notFound, setNotFound] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -53,6 +55,10 @@ export default function ProfilePage() {
         setHasMore(a.length === PAGE_SIZE);
       })
       .catch(() => active && setActivity([]));
+    api
+      .userLists(username)
+      .then((l) => active && setLists(l))
+      .catch(() => active && setLists([]));
     return () => {
       active = false;
     };
@@ -150,6 +156,17 @@ export default function ProfilePage() {
           <Stat label="Following" value={profile.stats.following} />
         </Link>
       </div>
+
+      {lists.length > 0 && (
+        <>
+          <h2 className="mb-3 mt-8 text-lg font-semibold">Lists</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {lists.map((l) => (
+              <ListCard key={l.id} list={l} />
+            ))}
+          </div>
+        </>
+      )}
 
       <h2 className="mb-3 mt-8 text-lg font-semibold">Recent activity</h2>
       {!activity && <p className="text-white/50">Loading…</p>}

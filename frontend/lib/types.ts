@@ -144,3 +144,36 @@ export interface FeedItem {
   film: FeedFilm;
   created_at: string;
 }
+
+// ---- lists
+export interface ListFilm {
+  tmdb_id: number;
+  title: string;
+  release_date: string | null;
+  poster_path: string | null;
+  vote_average: number | null;
+}
+
+export interface ListItem {
+  film: ListFilm;
+  rank: number | null;
+  note: string | null;
+}
+
+export interface ListSummary {
+  id: number;
+  title: string;
+  description: string | null;
+  is_ranked: boolean;
+  is_public: boolean;
+  is_system: boolean;
+  item_count: number;
+  owner: UserCard | null;
+  created_at: string;
+  preview_posters: string[];
+}
+
+export interface ListDetail extends ListSummary {
+  items: ListItem[];
+  is_owner: boolean;
+}

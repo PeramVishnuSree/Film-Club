@@ -4,6 +4,9 @@ import type {
   FilmDetail,
   FilmMeState,
   FilmSummary,
+  ListDetail,
+  ListItem,
+  ListSummary,
   Profile,
   Provider,
   RankedFilm,
@@ -180,6 +183,53 @@ export const api = {
 
   myFeed: (limit = 30, offset = 0) =>
     request<FeedItem[]>(`/me/feed?limit=${limit}&offset=${offset}`),
+
+  // ---- lists
+  myLists: () => request<ListSummary[]>("/me/lists"),
+
+  userLists: (username: string) =>
+    request<ListSummary[]>(`/users/${username}/lists`),
+
+  list: (listId: number) => request<ListDetail>(`/lists/${listId}`),
+
+  createList: (body: {
+    title: string;
+    description?: string | null;
+    is_ranked?: boolean;
+    is_public?: boolean;
+  }) => request<ListDetail>("/lists", { method: "POST", body: JSON.stringify(body) }),
+
+  updateList: (
+    listId: number,
+    body: {
+      title?: string;
+      description?: string | null;
+      is_ranked?: boolean;
+      is_public?: boolean;
+    },
+  ) =>
+    request<ListDetail>(`/lists/${listId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+
+  deleteList: (listId: number) =>
+    request(`/lists/${listId}`, { method: "DELETE" }),
+
+  addListItem: (listId: number, tmdbId: number, note?: string | null) =>
+    request<ListItem>(`/lists/${listId}/items`, {
+      method: "POST",
+      body: JSON.stringify({ tmdb_id: tmdbId, note: note ?? null }),
+    }),
+
+  removeListItem: (listId: number, tmdbId: number) =>
+    request(`/lists/${listId}/items/${tmdbId}`, { method: "DELETE" }),
+
+  reorderList: (listId: number, tmdbIds: number[]) =>
+    request<ListDetail>(`/lists/${listId}/order`, {
+      method: "PUT",
+      body: JSON.stringify({ tmdb_ids: tmdbIds }),
+    }),
 };
 
 // ---- TMDB images
