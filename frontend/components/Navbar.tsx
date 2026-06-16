@@ -14,12 +14,10 @@ export default function Navbar() {
   const [unread, setUnread] = useState(0);
 
   // Poll the unread count while logged in, and refresh on navigation so the
-  // badge clears right after visiting the notifications page.
+  // badge clears right after visiting the notifications page. The badge value
+  // is derived below so a logged-out user shows zero without a state write here.
   useEffect(() => {
-    if (!user) {
-      setUnread(0);
-      return;
-    }
+    if (!user) return;
     let active = true;
     const tick = () =>
       api
@@ -38,6 +36,9 @@ export default function Navbar() {
     e.preventDefault();
     if (q.trim()) router.push(`/search?q=${encodeURIComponent(q.trim())}`);
   }
+
+  // Logged-out users always see a cleared badge.
+  const unreadBadge = user ? unread : 0;
 
   return (
     <header className="border-b border-white/10 bg-black/30 backdrop-blur sticky top-0 z-10">
@@ -86,9 +87,9 @@ export default function Navbar() {
               className="relative text-white/70 hover:text-white"
             >
               <span className="text-lg leading-none">🔔</span>
-              {unread > 0 && (
+              {unreadBadge > 0 && (
                 <span className="absolute -right-2 -top-1.5 min-w-[1.1rem] rounded-full bg-orange-500 px-1 text-center text-[10px] font-bold leading-4 text-black">
-                  {unread > 99 ? "99+" : unread}
+                  {unreadBadge > 99 ? "99+" : unreadBadge}
                 </span>
               )}
             </Link>

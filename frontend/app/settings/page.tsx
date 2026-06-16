@@ -22,7 +22,9 @@ export default function SettingsPage() {
     if (!loading && !user) router.push("/login");
   }, [loading, user, router]);
 
-  // Seed the form once the user is available.
+  // Seed the editable form fields from the loaded user. This intentionally
+  // syncs server state into local form state, which the lint rule flags.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (user) {
       setDisplayName(user.display_name ?? "");
@@ -31,6 +33,7 @@ export default function SettingsPage() {
       setRegion(user.region ?? "US");
     }
   }, [user]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (loading || !user) return <p className="text-white/50">Loading…</p>;
 

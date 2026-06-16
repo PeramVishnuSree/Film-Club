@@ -33,9 +33,11 @@ export default function ProfilePage() {
 
   // Re-fetch whenever the username changes or the viewer's auth state settles
   // (so is_following / is_self reflect the signed-in user).
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!username) return;
     let active = true;
+    // Clear stale data so the new profile loads from a blank slate.
     setProfile(null);
     setActivity(null);
     setNotFound(false);
@@ -63,6 +65,7 @@ export default function ProfilePage() {
       active = false;
     };
   }, [username, user]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function loadMore() {
     if (!activity || loadingMore) return;
