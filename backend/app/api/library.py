@@ -14,6 +14,7 @@ from app.models import (
     User,
     WatchlistItem,
 )
+from app.schemas.film import FilmSummary
 from app.schemas.library import (
     DiaryIn,
     DiaryOut,
@@ -137,6 +138,36 @@ async def remove_from_watchlist(
             )
             await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/me/watchlist", response_model=list[FilmSummary])
+async def my_watchlist(
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+    limit: int = Query(default=100, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> list[FilmSummary]:
+    rows = (
+        await session.execute(
+            select(Film)
+            .join(WatchlistItem, WatchlistItem.film_id == Film.id)
+            .where(WatchlistItem.user_id == user.id)
+            .order_by(WatchlistItem.id.desc())  # most recently added first
+            .limit(limit)
+            .offset(offset)
+        )
+    ).scalars().all()
+    return [
+        FilmSummary(
+            tmdb_id=film.tmdb_id,
+            title=film.title,
+            release_date=film.release_date,
+            overview=film.overview,
+            poster_path=film.poster_path,
+            vote_average=film.vote_average,
+        )
+        for film in rows
+    ]
 
 
 # ---------------------------------------------------------------- diary

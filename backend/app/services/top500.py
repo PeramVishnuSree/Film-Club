@@ -7,7 +7,17 @@ from app.services.tmdb import TMDBClient
 
 TOP_500_TITLE = "Top 500"
 TOP_500_DESCRIPTION = "The 500 highest-rated films, generated from TMDB ratings."
-PAGES = 25  # 20 films per page = 500.
+# Pull a larger candidate pool, then re-rank with a Bayesian weighted score so
+# low-vote anomalies don't outrank well-established films.
+CANDIDATE_PAGES = 50  # 20 films/page -> ~1000 candidates
+TOP_N = 500
+MIN_VOTES = 3000  # Bayesian prior strength (m): votes needed to "trust" a rating
+
+
+def _weighted_rating(vote_average: float, vote_count: int, mean: float) -> float:
+    """IMDb-style Bayesian average: pull sparse-vote ratings toward the pool mean."""
+    v = vote_count
+    return (v / (v + MIN_VOTES)) * vote_average + (MIN_VOTES / (v + MIN_VOTES)) * mean
 
 
 async def get_top_500_list(session: AsyncSession) -> List | None:
@@ -35,17 +45,32 @@ async def refresh_top_500(session: AsyncSession, client: TMDBClient) -> int:
 
     await session.execute(delete(ListItem).where(ListItem.list_id == film_list.id))
 
-    rank = 0
-    seen: set[int] = set()
-    for page in range(1, PAGES + 1):
+    # Gather a deduped candidate pool with the data needed to re-rank.
+    candidates: dict[int, dict] = {}
+    for page in range(1, CANDIDATE_PAGES + 1):
         data = await client.top_rated_movies(page)
         for movie in data.get("results", []):
-            if movie["id"] in seen:
+            if movie["id"] in candidates:
                 continue
-            seen.add(movie["id"])
-            rank += 1
-            film_id = await upsert_film_summary(session, movie)
-            session.add(ListItem(list_id=film_list.id, film_id=film_id, rank=rank))
+            if movie.get("vote_count") and movie.get("vote_average") is not None:
+                candidates[movie["id"]] = movie
+
+    if not candidates:
+        await session.commit()
+        return 0
+
+    pool = list(candidates.values())
+    mean = sum(m["vote_average"] for m in pool) / len(pool)
+    pool.sort(
+        key=lambda m: _weighted_rating(m["vote_average"], m["vote_count"], mean),
+        reverse=True,
+    )
+
+    rank = 0
+    for movie in pool[:TOP_N]:
+        rank += 1
+        film_id = await upsert_film_summary(session, movie)
+        session.add(ListItem(list_id=film_list.id, film_id=film_id, rank=rank))
 
     await session.commit()
     return rank

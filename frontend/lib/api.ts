@@ -129,6 +129,8 @@ export const api = {
 
   myDiary: () => request<DiaryEntry[]>("/me/diary"),
 
+  myWatchlist: () => request<FilmSummary[]>("/me/watchlist"),
+
   addReview: (
     tmdbId: number,
     body: { body: string; contains_spoilers?: boolean },

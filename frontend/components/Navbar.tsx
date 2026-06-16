@@ -28,9 +28,14 @@ export default function Navbar() {
           Top 500
         </Link>
         {user && (
-          <Link href="/diary" className="text-sm text-white/70 hover:text-white">
-            Diary
-          </Link>
+          <>
+            <Link href="/watchlist" className="text-sm text-white/70 hover:text-white">
+              Watchlist
+            </Link>
+            <Link href="/diary" className="text-sm text-white/70 hover:text-white">
+              Diary
+            </Link>
+          </>
         )}
         <form onSubmit={onSearch} className="ml-auto">
           <input
