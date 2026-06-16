@@ -1,0 +1,56 @@
+# Full local/production-like stack: Postgres + FastAPI backend + Next.js frontend.
+#
+#   cp backend/.env.example backend/.env   # then fill in TMDB creds + SECRET_KEY
+#   docker compose up --build
+#
+# Frontend on http://localhost:3000, API on http://localhost:8000.
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-filmclub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-filmclub}
+      POSTGRES_DB: ${POSTGRES_DB:-filmclub}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-filmclub}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Container talks to the db service over the compose network.
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-filmclub}:${POSTGRES_PASSWORD:-filmclub}@db:5432/${POSTGRES_DB:-filmclub}
+      SECRET_KEY: ${SECRET_KEY:-change-me}
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      TMDB_ACCESS_TOKEN: ${TMDB_ACCESS_TOKEN:-}
+      CORS_ORIGINS: '["http://localhost:3000"]'
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Public env vars are baked at build time for the browser bundle.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
