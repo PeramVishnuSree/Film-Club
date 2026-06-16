@@ -17,6 +17,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [verifyMsg, setVerifyMsg] = useState<string | null>(null);
+  const [verifyBusy, setVerifyBusy] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
@@ -60,6 +62,21 @@ export default function SettingsPage() {
     }
   }
 
+  async function onResendVerification() {
+    setVerifyBusy(true);
+    setVerifyMsg(null);
+    try {
+      const res = await api.requestEmailVerification();
+      setVerifyMsg(res.detail);
+    } catch (err) {
+      setVerifyMsg(
+        err instanceof ApiError ? err.message : "Could not send the email.",
+      );
+    } finally {
+      setVerifyBusy(false);
+    }
+  }
+
   return (
     <div className="max-w-lg">
       <h1 className="mb-1 text-2xl font-bold">Edit profile</h1>
@@ -70,6 +87,25 @@ export default function SettingsPage() {
         </Link>
         .
       </p>
+
+      {!user.email_verified && (
+        <div className="mb-6 rounded-md border border-yellow-400/30 bg-yellow-400/10 p-3 text-sm text-yellow-200">
+          <p className="mb-2">
+            Your email address ({user.email}) isn&apos;t verified yet.
+          </p>
+          {verifyMsg ? (
+            <p className="text-yellow-100">{verifyMsg}</p>
+          ) : (
+            <button
+              onClick={onResendVerification}
+              disabled={verifyBusy}
+              className="rounded-md bg-yellow-400/20 px-3 py-1 font-medium text-yellow-100 hover:bg-yellow-400/30 disabled:opacity-50"
+            >
+              {verifyBusy ? "Sending…" : "Resend verification email"}
+            </button>
+          )}
+        </div>
+      )}
 
       <form onSubmit={onSubmit} className="space-y-5">
         <div>

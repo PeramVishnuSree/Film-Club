@@ -6,6 +6,7 @@ export interface User {
   bio: string | null;
   avatar_url: string | null;
   region: string;
+  email_verified: boolean;
   created_at: string;
 }
 

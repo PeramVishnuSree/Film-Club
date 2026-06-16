@@ -33,6 +33,7 @@ class UserOut(BaseModel):
     bio: str | None = None
     avatar_url: str | None = None
     region: str
+    email_verified: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -42,3 +43,20 @@ class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserOut
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class EmailVerifyConfirm(BaseModel):
+    token: str
+
+
+class MessageOut(BaseModel):
+    detail: str

@@ -94,6 +94,27 @@ export const api = {
 
   me: () => request<User>("/auth/me"),
 
+  requestPasswordReset: (email: string) =>
+    request<{ detail: string }>("/auth/password-reset/request", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  confirmPasswordReset: (token: string, newPassword: string) =>
+    request<{ detail: string }>("/auth/password-reset/confirm", {
+      method: "POST",
+      body: JSON.stringify({ token, new_password: newPassword }),
+    }),
+
+  requestEmailVerification: () =>
+    request<{ detail: string }>("/auth/verify-email/request", { method: "POST" }),
+
+  confirmEmailVerification: (token: string) =>
+    request<{ detail: string }>("/auth/verify-email/confirm", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    }),
+
   updateProfile: (body: {
     display_name?: string | null;
     bio?: string | null;

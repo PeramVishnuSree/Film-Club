@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base, TimestampMixin
@@ -19,6 +19,10 @@ class User(Base, TimestampMixin):
     avatar_url: Mapped[str | None] = mapped_column(String(500))
     # Region drives streaming-availability lookups (ISO 3166-1 alpha-2).
     region: Mapped[str] = mapped_column(String(2), default="US", nullable=False)
+    # Set once the user confirms ownership of their email address.
+    email_verified: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="false"
+    )
 
 
 class Follow(Base, TimestampMixin):
