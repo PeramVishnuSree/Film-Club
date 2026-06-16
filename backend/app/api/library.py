@@ -9,6 +9,7 @@ from app.models import (
     DiaryEntry,
     Film,
     InteractionType,
+    NotificationType,
     Rating,
     Review,
     ReviewLike,
@@ -28,6 +29,7 @@ from app.schemas.library import (
 )
 from app.services.film_cache import get_or_cache_film
 from app.services.interactions import record_interaction
+from app.services.notifications import notify
 from app.services.tmdb import TMDBClient
 
 router = APIRouter(tags=["library"])
@@ -386,6 +388,18 @@ async def like_review(
     ).scalar_one_or_none()
     if existing is None:
         session.add(ReviewLike(user_id=user.id, review_id=review_id))
+        film = await session.get(Film, review.film_id)
+        notify(
+            session,
+            user_id=review.user_id,
+            actor_id=user.id,
+            type_=NotificationType.review_like,
+            data={
+                "review_id": review.id,
+                "film_tmdb_id": film.tmdb_id if film else None,
+                "film_title": film.title if film else None,
+            },
+        )
         await session.commit()
     count = (
         await session.execute(

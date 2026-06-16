@@ -13,7 +13,9 @@ from app.models import (
     Review,
     User,
 )
+from app.models import NotificationType
 from app.schemas.social import FeedFilm, FeedItem, ProfileOut, ProfileStats, UserCard
+from app.services.notifications import notify
 
 router = APIRouter(tags=["social"])
 
@@ -231,6 +233,12 @@ async def follow_user(
         raise HTTPException(status_code=400, detail="You cannot follow yourself")
     if not await _is_following(session, user.id, target.id):
         session.add(Follow(follower_id=user.id, followee_id=target.id))
+        notify(
+            session,
+            user_id=target.id,
+            actor_id=user.id,
+            type_=NotificationType.follow,
+        )
         await session.commit()
     return {"following": True}
 

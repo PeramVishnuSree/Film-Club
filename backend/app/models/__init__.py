@@ -11,6 +11,7 @@ from app.models.film import (
     Person,
 )
 from app.models.interaction import Interaction, InteractionType
+from app.models.notification import Notification, NotificationType
 from app.models.library import (
     DiaryEntry,
     List,
@@ -44,4 +45,6 @@ __all__ = [
     "ListLike",
     "Interaction",
     "InteractionType",
+    "Notification",
+    "NotificationType",
 ]

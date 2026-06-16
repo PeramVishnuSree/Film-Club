@@ -5,7 +5,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_optional_user, get_tmdb
 from app.db import get_session
-from app.models import Film, InteractionType, List, ListItem, ListLike, User
+from app.models import (
+    Film,
+    InteractionType,
+    List,
+    ListItem,
+    ListLike,
+    NotificationType,
+    User,
+)
 from app.schemas.lists import (
     ListCreate,
     ListDetail,
@@ -20,6 +28,7 @@ from app.schemas.lists import (
 from app.schemas.social import UserCard
 from app.services.film_cache import get_or_cache_film
 from app.services.interactions import record_interaction
+from app.services.notifications import notify
 from app.services.tmdb import TMDBClient
 
 router = APIRouter(tags=["lists"])
@@ -381,6 +390,14 @@ async def like_list(
     ).scalar_one_or_none()
     if existing is None:
         session.add(ListLike(user_id=user.id, list_id=list_id))
+        if lst.user_id is not None:
+            notify(
+                session,
+                user_id=lst.user_id,
+                actor_id=user.id,
+                type_=NotificationType.list_like,
+                data={"list_id": lst.id, "list_title": lst.title},
+            )
         await session.commit()
     count = (
         await session.execute(

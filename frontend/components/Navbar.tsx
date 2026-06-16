@@ -1,14 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [q, setQ] = useState("");
+  const [unread, setUnread] = useState(0);
+
+  // Poll the unread count while logged in, and refresh on navigation so the
+  // badge clears right after visiting the notifications page.
+  useEffect(() => {
+    if (!user) {
+      setUnread(0);
+      return;
+    }
+    let active = true;
+    const tick = () =>
+      api
+        .unreadCount()
+        .then((r) => active && setUnread(r.unread))
+        .catch(() => {});
+    tick();
+    const id = setInterval(tick, 30000);
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
+  }, [user, pathname]);
 
   function onSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -53,6 +77,18 @@ export default function Navbar() {
         </form>
         {user ? (
           <div className="flex items-center gap-3">
+            <Link
+              href="/notifications"
+              aria-label="Notifications"
+              className="relative text-white/70 hover:text-white"
+            >
+              <span className="text-lg leading-none">🔔</span>
+              {unread > 0 && (
+                <span className="absolute -right-2 -top-1.5 min-w-[1.1rem] rounded-full bg-orange-500 px-1 text-center text-[10px] font-bold leading-4 text-black">
+                  {unread > 99 ? "99+" : unread}
+                </span>
+              )}
+            </Link>
             <Link
               href={`/u/${user.username}`}
               className="text-sm text-white/70 hover:text-white"

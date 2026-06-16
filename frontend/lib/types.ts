@@ -147,6 +147,22 @@ export interface FeedItem {
   created_at: string;
 }
 
+// ---- notifications
+export interface Notification {
+  id: number;
+  type: "follow" | "review_like" | "list_like" | string;
+  actor: UserCard | null;
+  read: boolean;
+  data: {
+    review_id?: number;
+    film_tmdb_id?: number;
+    film_title?: string;
+    list_id?: number;
+    list_title?: string;
+  } | null;
+  created_at: string;
+}
+
 // ---- lists
 export interface ListFilm {
   tmdb_id: number;

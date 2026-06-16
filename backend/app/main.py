@@ -9,6 +9,7 @@ from app.api.films import router as films_router
 from app.api.health import router as health_router
 from app.api.library import router as library_router
 from app.api.lists import router as lists_router
+from app.api.notifications import router as notifications_router
 from app.api.social import router as social_router
 from app.config import settings
 from app.services.tmdb import TMDBClient
@@ -40,6 +41,7 @@ app.include_router(films_router)
 app.include_router(library_router)
 app.include_router(lists_router)
 app.include_router(social_router)
+app.include_router(notifications_router)
 
 
 @app.get("/")

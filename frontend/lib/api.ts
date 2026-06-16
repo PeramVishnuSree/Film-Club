@@ -7,6 +7,7 @@ import type {
   ListDetail,
   ListItem,
   ListSummary,
+  Notification,
   Profile,
   Provider,
   RankedFilm,
@@ -198,6 +199,21 @@ export const api = {
 
   myFeed: (limit = 30, offset = 0) =>
     request<FeedItem[]>(`/me/feed?limit=${limit}&offset=${offset}`),
+
+  // ---- notifications
+  notifications: (limit = 30, offset = 0) =>
+    request<Notification[]>(
+      `/me/notifications?limit=${limit}&offset=${offset}`,
+    ),
+
+  unreadCount: () =>
+    request<{ unread: number }>("/me/notifications/unread_count"),
+
+  markNotificationsRead: () =>
+    request("/me/notifications/read", { method: "POST" }),
+
+  markNotificationRead: (id: number) =>
+    request<Notification>(`/me/notifications/${id}/read`, { method: "POST" }),
 
   // ---- lists
   myLists: () => request<ListSummary[]>("/me/lists"),
