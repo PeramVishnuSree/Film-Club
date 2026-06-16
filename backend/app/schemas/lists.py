@@ -62,6 +62,8 @@ class ListSummary(BaseModel):
     created_at: datetime
     # First few posters, for a preview thumbnail strip.
     preview_posters: list[str] = []
+    like_count: int = 0
+    liked: bool = False  # whether the requesting user liked it
 
 
 class ListDetail(ListSummary):

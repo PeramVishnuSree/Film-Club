@@ -104,3 +104,33 @@ class ListItem(Base, TimestampMixin):
     )
     rank: Mapped[int | None] = mapped_column(Integer)
     note: Mapped[str | None] = mapped_column(Text)
+
+
+class ReviewLike(Base, TimestampMixin):
+    """A user's like on a review. FK cascade drops likes when either side goes."""
+
+    __tablename__ = "review_likes"
+    __table_args__ = (UniqueConstraint("user_id", "review_id", name="uq_review_like"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    review_id: Mapped[int] = mapped_column(
+        ForeignKey("reviews.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+
+
+class ListLike(Base, TimestampMixin):
+    """A user's like on a list."""
+
+    __tablename__ = "list_likes"
+    __table_args__ = (UniqueConstraint("user_id", "list_id", name="uq_list_like"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    list_id: Mapped[int] = mapped_column(
+        ForeignKey("lists.id", ondelete="CASCADE"), index=True, nullable=False
+    )

@@ -100,6 +100,8 @@ export interface Review {
   body: string;
   contains_spoilers: boolean;
   created_at: string;
+  like_count: number;
+  liked: boolean;
 }
 
 // ---- social
@@ -171,6 +173,8 @@ export interface ListSummary {
   owner: UserCard | null;
   created_at: string;
   preview_posters: string[];
+  like_count: number;
+  liked: boolean;
 }
 
 export interface ListDetail extends ListSummary {

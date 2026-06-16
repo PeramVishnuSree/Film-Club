@@ -1,11 +1,11 @@
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_optional_user, get_tmdb
 from app.db import get_session
-from app.models import Film, InteractionType, List, ListItem, User
+from app.models import Film, InteractionType, List, ListItem, ListLike, User
 from app.schemas.lists import (
     ListCreate,
     ListDetail,
@@ -62,10 +62,32 @@ async def _list_meta(
     return count, list(posters)
 
 
+async def _like_meta(
+    session: AsyncSession, lst: List, viewer: User | None
+) -> tuple[int, bool]:
+    """Total likes on a list and whether the viewer is one of them."""
+    count = (
+        await session.execute(
+            select(func.count()).select_from(ListLike).where(ListLike.list_id == lst.id)
+        )
+    ).scalar_one()
+    liked = False
+    if viewer is not None:
+        liked = (
+            await session.execute(
+                select(ListLike.id).where(
+                    ListLike.list_id == lst.id, ListLike.user_id == viewer.id
+                )
+            )
+        ).first() is not None
+    return count, liked
+
+
 async def _summary(
-    session: AsyncSession, lst: List, owner: User | None
+    session: AsyncSession, lst: List, owner: User | None, viewer: User | None = None
 ) -> ListSummary:
     count, posters = await _list_meta(session, lst, owner)
+    like_count, liked = await _like_meta(session, lst, viewer)
     return ListSummary(
         id=lst.id,
         title=lst.title,
@@ -77,6 +99,8 @@ async def _summary(
         owner=UserCard.model_validate(owner) if owner else None,
         created_at=lst.created_at,
         preview_posters=posters,
+        like_count=like_count,
+        liked=liked,
     )
 
 
@@ -97,6 +121,7 @@ async def _detail(
         for item, film in rows
     ]
     posters = [f.film.poster_path for f in items if f.film.poster_path][:PREVIEW_COUNT]
+    like_count, liked = await _like_meta(session, lst, viewer)
     return ListDetail(
         id=lst.id,
         title=lst.title,
@@ -110,6 +135,8 @@ async def _detail(
         preview_posters=posters,
         items=items,
         is_owner=viewer is not None and owner is not None and viewer.id == owner.id,
+        like_count=like_count,
+        liked=liked,
     )
 
 
@@ -331,6 +358,58 @@ async def reorder_list(
     return await _detail(session, lst, user, user)
 
 
+# ------------------------------------------------------------------ likes
+
+
+@router.post("/lists/{list_id}/like", status_code=status.HTTP_201_CREATED)
+async def like_list(
+    list_id: int,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, bool | int]:
+    lst = await session.get(List, list_id)
+    if lst is None:
+        raise HTTPException(status_code=404, detail="List not found")
+    if not lst.is_public and not lst.is_system and lst.user_id != user.id:
+        raise HTTPException(status_code=404, detail="List not found")
+    existing = (
+        await session.execute(
+            select(ListLike).where(
+                ListLike.user_id == user.id, ListLike.list_id == list_id
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is None:
+        session.add(ListLike(user_id=user.id, list_id=list_id))
+        await session.commit()
+    count = (
+        await session.execute(
+            select(func.count()).select_from(ListLike).where(ListLike.list_id == list_id)
+        )
+    ).scalar_one()
+    return {"liked": True, "like_count": count}
+
+
+@router.delete("/lists/{list_id}/like", status_code=status.HTTP_200_OK)
+async def unlike_list(
+    list_id: int,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, bool | int]:
+    await session.execute(
+        delete(ListLike).where(
+            ListLike.user_id == user.id, ListLike.list_id == list_id
+        )
+    )
+    await session.commit()
+    count = (
+        await session.execute(
+            select(func.count()).select_from(ListLike).where(ListLike.list_id == list_id)
+        )
+    ).scalar_one()
+    return {"liked": False, "like_count": count}
+
+
 # ------------------------------------------------------------------ collections
 
 
@@ -346,7 +425,7 @@ async def my_lists(
             .order_by(List.id.desc())
         )
     ).scalars().all()
-    return [await _summary(session, lst, user) for lst in lists]
+    return [await _summary(session, lst, user, user) for lst in lists]
 
 
 @router.get("/users/{username}/lists", response_model=list[ListSummary])
@@ -371,4 +450,4 @@ async def user_lists(
             query.order_by(List.id.desc()).limit(limit).offset(offset)
         )
     ).scalars().all()
-    return [await _summary(session, lst, owner) for lst in lists]
+    return [await _summary(session, lst, owner, viewer) for lst in lists]

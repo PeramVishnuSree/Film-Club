@@ -67,3 +67,5 @@ class ReviewOut(BaseModel):
     body: str
     contains_spoilers: bool
     created_at: datetime
+    like_count: int = 0
+    liked: bool = False  # whether the requesting user liked it

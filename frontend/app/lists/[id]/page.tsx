@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import LikeButton from "@/components/LikeButton";
 import { api, ApiError, posterUrl } from "@/lib/api";
 import type { FilmSummary, ListDetail } from "@/lib/types";
 
@@ -101,6 +102,15 @@ export default function ListDetailPage() {
               </>
             )}
           </p>
+          <div className="mt-2">
+            <LikeButton
+              liked={list.liked}
+              count={list.like_count}
+              onToggle={(next) =>
+                next ? api.likeList(listId) : api.unlikeList(listId)
+              }
+            />
+          </div>
         </div>
         {list.is_owner && (
           <div className="flex shrink-0 gap-2">

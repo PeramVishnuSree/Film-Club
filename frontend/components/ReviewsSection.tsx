@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import LikeButton from "./LikeButton";
 import { api } from "@/lib/api";
 import type { Review } from "@/lib/types";
 
@@ -45,6 +46,15 @@ export default function ReviewsSection({
             ) : (
               <p className="whitespace-pre-wrap text-sm text-white/80">{r.body}</p>
             )}
+            <div className="mt-2">
+              <LikeButton
+                liked={r.liked}
+                count={r.like_count}
+                onToggle={(next) =>
+                  next ? api.likeReview(r.id) : api.unlikeReview(r.id)
+                }
+              />
+            </div>
           </li>
         );
       })}

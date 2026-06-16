@@ -1,9 +1,9 @@
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_tmdb
+from app.api.deps import get_current_user, get_optional_user, get_tmdb
 from app.db import get_session
 from app.models import (
     DiaryEntry,
@@ -11,6 +11,7 @@ from app.models import (
     InteractionType,
     Rating,
     Review,
+    ReviewLike,
     User,
     WatchlistItem,
 )
@@ -301,6 +302,7 @@ async def add_review(
 async def list_reviews(
     tmdb_id: int,
     session: AsyncSession = Depends(get_session),
+    viewer: User | None = Depends(get_optional_user),
     limit: int = Query(default=20, le=100),
     offset: int = Query(default=0, ge=0),
 ) -> list[ReviewOut]:
@@ -319,6 +321,36 @@ async def list_reviews(
             .offset(offset)
         )
     ).all()
+    review_ids = [review.id for review, _ in rows]
+
+    # Like counts for the reviews on this page, in one grouped query.
+    like_counts: dict[int, int] = {}
+    if review_ids:
+        count_rows = (
+            await session.execute(
+                select(ReviewLike.review_id, func.count())
+                .where(ReviewLike.review_id.in_(review_ids))
+                .group_by(ReviewLike.review_id)
+            )
+        ).all()
+        like_counts = {rid: count for rid, count in count_rows}
+
+    # Which of these the viewer has liked (empty set when logged out).
+    liked_ids: set[int] = set()
+    if viewer is not None and review_ids:
+        liked_ids = set(
+            (
+                await session.execute(
+                    select(ReviewLike.review_id).where(
+                        ReviewLike.user_id == viewer.id,
+                        ReviewLike.review_id.in_(review_ids),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
     return [
         ReviewOut(
             id=review.id,
@@ -329,9 +361,62 @@ async def list_reviews(
             body=review.body,
             contains_spoilers=review.contains_spoilers,
             created_at=review.created_at,
+            like_count=like_counts.get(review.id, 0),
+            liked=review.id in liked_ids,
         )
         for review, author in rows
     ]
+
+
+@router.post("/reviews/{review_id}/like", status_code=status.HTTP_201_CREATED)
+async def like_review(
+    review_id: int,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, bool | int]:
+    review = await session.get(Review, review_id)
+    if review is None:
+        raise HTTPException(status_code=404, detail="Review not found")
+    existing = (
+        await session.execute(
+            select(ReviewLike).where(
+                ReviewLike.user_id == user.id, ReviewLike.review_id == review_id
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is None:
+        session.add(ReviewLike(user_id=user.id, review_id=review_id))
+        await session.commit()
+    count = (
+        await session.execute(
+            select(func.count()).select_from(ReviewLike).where(
+                ReviewLike.review_id == review_id
+            )
+        )
+    ).scalar_one()
+    return {"liked": True, "like_count": count}
+
+
+@router.delete("/reviews/{review_id}/like", status_code=status.HTTP_200_OK)
+async def unlike_review(
+    review_id: int,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, bool | int]:
+    await session.execute(
+        delete(ReviewLike).where(
+            ReviewLike.user_id == user.id, ReviewLike.review_id == review_id
+        )
+    )
+    await session.commit()
+    count = (
+        await session.execute(
+            select(func.count()).select_from(ReviewLike).where(
+                ReviewLike.review_id == review_id
+            )
+        )
+    ).scalar_one()
+    return {"liked": False, "like_count": count}
 
 
 @router.delete("/reviews/{review_id}", status_code=status.HTTP_204_NO_CONTENT)

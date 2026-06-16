@@ -155,6 +155,18 @@ export const api = {
 
   reviews: (tmdbId: number) => request<Review[]>(`/films/${tmdbId}/reviews`),
 
+  likeReview: (reviewId: number) =>
+    request<{ liked: boolean; like_count: number }>(
+      `/reviews/${reviewId}/like`,
+      { method: "POST" },
+    ),
+
+  unlikeReview: (reviewId: number) =>
+    request<{ liked: boolean; like_count: number }>(
+      `/reviews/${reviewId}/like`,
+      { method: "DELETE" },
+    ),
+
   // ---- social
   searchUsers: (q: string) =>
     request<UserCard[]>(`/users/search?q=${encodeURIComponent(q)}`),
@@ -232,6 +244,16 @@ export const api = {
     request<ListDetail>(`/lists/${listId}/order`, {
       method: "PUT",
       body: JSON.stringify({ tmdb_ids: tmdbIds }),
+    }),
+
+  likeList: (listId: number) =>
+    request<{ liked: boolean; like_count: number }>(`/lists/${listId}/like`, {
+      method: "POST",
+    }),
+
+  unlikeList: (listId: number) =>
+    request<{ liked: boolean; like_count: number }>(`/lists/${listId}/like`, {
+      method: "DELETE",
     }),
 };
 

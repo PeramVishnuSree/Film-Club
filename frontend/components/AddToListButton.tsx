@@ -60,6 +60,8 @@ export default function AddToListButton({ tmdbId }: { tmdbId: number }) {
         owner: created.owner,
         created_at: created.created_at,
         preview_posters: created.preview_posters,
+        like_count: created.like_count,
+        liked: created.liked,
       };
       setLists((ls) => [summary, ...(ls ?? [])]);
       setAdded((s) => new Set(s).add(created.id));

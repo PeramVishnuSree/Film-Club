@@ -15,8 +15,10 @@ from app.models.library import (
     DiaryEntry,
     List,
     ListItem,
+    ListLike,
     Rating,
     Review,
+    ReviewLike,
     WatchlistItem,
 )
 from app.models.user import Follow, User
@@ -38,6 +40,8 @@ __all__ = [
     "Review",
     "List",
     "ListItem",
+    "ReviewLike",
+    "ListLike",
     "Interaction",
     "InteractionType",
 ]

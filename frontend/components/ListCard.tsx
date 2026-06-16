@@ -43,6 +43,7 @@ export default function ListCard({ list }: { list: ListSummary }) {
       <p className="mt-0.5 text-xs text-white/40">
         {list.item_count} {list.item_count === 1 ? "film" : "films"}
         {list.owner ? ` · ${list.owner.display_name ?? list.owner.username}` : ""}
+        {list.like_count > 0 ? ` · ♥ ${list.like_count}` : ""}
       </p>
       {list.description && (
         <p className="mt-1 line-clamp-2 text-sm text-white/60">{list.description}</p>
