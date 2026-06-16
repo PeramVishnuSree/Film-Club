@@ -39,3 +39,20 @@ async def get_current_user(
     if user is None:
         raise _credentials_error
     return user
+
+
+async def get_optional_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    session: AsyncSession = Depends(get_session),
+) -> User | None:
+    """Like get_current_user, but returns None instead of raising when the
+    request is unauthenticated or the token is invalid. For endpoints that are
+    public but personalize their response for signed-in users."""
+    if credentials is None:
+        return None
+    try:
+        payload = decode_access_token(credentials.credentials)
+        user_id = int(payload["sub"])
+    except (jwt.PyJWTError, KeyError, ValueError):
+        return None
+    return await session.get(User, user_id)

@@ -101,3 +101,46 @@ export interface Review {
   contains_spoilers: boolean;
   created_at: string;
 }
+
+// ---- social
+export interface UserCard {
+  id: number;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+}
+
+export interface ProfileStats {
+  films_logged: number;
+  reviews: number;
+  followers: number;
+  following: number;
+}
+
+export interface Profile {
+  id: number;
+  username: string;
+  display_name: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  stats: ProfileStats;
+  is_following: boolean;
+  is_self: boolean;
+}
+
+export interface FeedFilm {
+  tmdb_id: number;
+  title: string;
+  poster_path: string | null;
+}
+
+export interface FeedItem {
+  id: number;
+  actor: UserCard;
+  type: string;
+  value: number | null;
+  film: FeedFilm;
+  created_at: string;
+}

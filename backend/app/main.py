@@ -8,6 +8,7 @@ from app.api.discover import router as discover_router
 from app.api.films import router as films_router
 from app.api.health import router as health_router
 from app.api.library import router as library_router
+from app.api.social import router as social_router
 from app.config import settings
 from app.services.tmdb import TMDBClient
 
@@ -36,6 +37,7 @@ app.include_router(auth_router)
 app.include_router(discover_router)
 app.include_router(films_router)
 app.include_router(library_router)
+app.include_router(social_router)
 
 
 @app.get("/")

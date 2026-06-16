@@ -1,13 +1,16 @@
 import type {
   DiaryEntry,
+  FeedItem,
   FilmDetail,
   FilmMeState,
   FilmSummary,
+  Profile,
   Provider,
   RankedFilm,
   Review,
   Token,
   User,
+  UserCard,
 } from "./types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -141,6 +144,35 @@ export const api = {
     }),
 
   reviews: (tmdbId: number) => request<Review[]>(`/films/${tmdbId}/reviews`),
+
+  // ---- social
+  profile: (username: string) => request<Profile>(`/users/${username}`),
+
+  userActivity: (username: string, limit = 30, offset = 0) =>
+    request<FeedItem[]>(
+      `/users/${username}/activity?limit=${limit}&offset=${offset}`,
+    ),
+
+  followers: (username: string, limit = 50, offset = 0) =>
+    request<UserCard[]>(
+      `/users/${username}/followers?limit=${limit}&offset=${offset}`,
+    ),
+
+  following: (username: string, limit = 50, offset = 0) =>
+    request<UserCard[]>(
+      `/users/${username}/following?limit=${limit}&offset=${offset}`,
+    ),
+
+  follow: (username: string) =>
+    request<{ following: boolean }>(`/users/${username}/follow`, {
+      method: "POST",
+    }),
+
+  unfollow: (username: string) =>
+    request(`/users/${username}/follow`, { method: "DELETE" }),
+
+  myFeed: (limit = 30, offset = 0) =>
+    request<FeedItem[]>(`/me/feed?limit=${limit}&offset=${offset}`),
 };
 
 // ---- TMDB images

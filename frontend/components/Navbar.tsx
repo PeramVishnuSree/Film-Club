@@ -29,6 +29,9 @@ export default function Navbar() {
         </Link>
         {user && (
           <>
+            <Link href="/feed" className="text-sm text-white/70 hover:text-white">
+              Feed
+            </Link>
             <Link href="/watchlist" className="text-sm text-white/70 hover:text-white">
               Watchlist
             </Link>
@@ -47,7 +50,12 @@ export default function Navbar() {
         </form>
         {user ? (
           <div className="flex items-center gap-3">
-            <span className="text-sm text-white/70">{user.display_name ?? user.username}</span>
+            <Link
+              href={`/u/${user.username}`}
+              className="text-sm text-white/70 hover:text-white"
+            >
+              {user.display_name ?? user.username}
+            </Link>
             <button
               onClick={logout}
               className="text-sm text-white/70 hover:text-white"
