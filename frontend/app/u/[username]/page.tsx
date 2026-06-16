@@ -120,12 +120,20 @@ export default function ProfilePage() {
               <p className="text-sm text-white/40">@{profile.username}</p>
             </div>
             {profile.is_self ? (
-              <Link
-                href="/settings"
-                className="rounded-md border border-white/15 px-4 py-1.5 text-sm text-white/80 hover:border-white/40 hover:text-white"
-              >
-                Edit profile
-              </Link>
+              <div className="flex shrink-0 gap-2">
+                <Link
+                  href="/stats"
+                  className="rounded-md border border-white/15 px-4 py-1.5 text-sm text-white/80 hover:border-white/40 hover:text-white"
+                >
+                  Stats
+                </Link>
+                <Link
+                  href="/settings"
+                  className="rounded-md border border-white/15 px-4 py-1.5 text-sm text-white/80 hover:border-white/40 hover:text-white"
+                >
+                  Edit profile
+                </Link>
+              </div>
             ) : user ? (
               <FollowButton
                 username={profile.username}

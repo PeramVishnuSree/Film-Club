@@ -15,7 +15,9 @@ from app.models import (
 )
 from app.models import NotificationType
 from app.schemas.social import FeedFilm, FeedItem, ProfileOut, ProfileStats, UserCard
+from app.schemas.stats import StatsOut
 from app.services.notifications import notify
+from app.services.stats import get_stats
 
 router = APIRouter(tags=["social"])
 
@@ -264,6 +266,17 @@ async def unfollow_user(
 
 
 # ------------------------------------------------------------------ feed
+
+
+@router.get("/me/stats", response_model=StatsOut)
+async def my_stats(
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+    year: int | None = Query(default=None, ge=1900, le=2100),
+) -> StatsOut:
+    """Lifetime totals plus a year-in-review breakdown (defaults to the most
+    recent year with activity)."""
+    return await get_stats(session, user, year)
 
 
 @router.get("/me/feed", response_model=list[FeedItem])

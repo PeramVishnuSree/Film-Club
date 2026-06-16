@@ -151,6 +151,49 @@ export interface RecommendedFilm extends FilmSummary {
   reason: string;
 }
 
+// ---- stats
+export interface RatingBucket {
+  value: number;
+  count: number;
+}
+export interface GenreCount {
+  name: string;
+  count: number;
+}
+export interface MonthCount {
+  month: number;
+  count: number;
+}
+export interface TopFilm {
+  tmdb_id: number;
+  title: string;
+  poster_path: string | null;
+  rating: number | null;
+}
+export interface YearStats {
+  year: number;
+  entries: number;
+  distinct_films: number;
+  hours: number;
+  by_month: MonthCount[];
+  top_genres: GenreCount[];
+  top_films: TopFilm[];
+}
+export interface LifetimeStats {
+  films_logged: number;
+  entries: number;
+  ratings: number;
+  reviews: number;
+  lists: number;
+  average_rating: number | null;
+  rating_distribution: RatingBucket[];
+}
+export interface Stats {
+  lifetime: LifetimeStats;
+  year: YearStats;
+  available_years: number[];
+}
+
 // ---- notifications
 export interface Notification {
   id: number;

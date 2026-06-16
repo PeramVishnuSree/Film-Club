@@ -13,6 +13,7 @@ import type {
   RankedFilm,
   RecommendedFilm,
   Review,
+  Stats,
   Token,
   User,
   UserCard,
@@ -203,6 +204,9 @@ export const api = {
 
   myFeed: (limit = 30, offset = 0) =>
     request<FeedItem[]>(`/me/feed?limit=${limit}&offset=${offset}`),
+
+  stats: (year?: number) =>
+    request<Stats>(`/me/stats${year ? `?year=${year}` : ""}`),
 
   // ---- notifications
   notifications: (limit = 30, offset = 0) =>
