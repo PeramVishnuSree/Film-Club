@@ -8,18 +8,41 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { FeedItem } from "@/lib/types";
 
+const PAGE_SIZE = 30;
+
 export default function FeedPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [items, setItems] = useState<FeedItem[] | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
   }, [loading, user, router]);
 
   useEffect(() => {
-    if (user) api.myFeed().then(setItems).catch(() => setItems([]));
+    if (user)
+      api
+        .myFeed(PAGE_SIZE, 0)
+        .then((page) => {
+          setItems(page);
+          setHasMore(page.length === PAGE_SIZE);
+        })
+        .catch(() => setItems([]));
   }, [user]);
+
+  async function loadMore() {
+    if (!items || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await api.myFeed(PAGE_SIZE, items.length);
+      setItems([...items, ...page]);
+      setHasMore(page.length === PAGE_SIZE);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   if (loading || !user) return <p className="text-white/50">Loading…</p>;
 
@@ -44,6 +67,17 @@ export default function FeedPage() {
           {items.map((item) => (
             <ActivityItem key={item.id} item={item} />
           ))}
+        </div>
+      )}
+      {items && items.length > 0 && hasMore && (
+        <div className="mt-4 text-center">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="rounded-md border border-white/15 px-4 py-2 text-sm text-white/70 hover:border-white/40 hover:text-white disabled:opacity-60"
+          >
+            {loadingMore ? "Loading…" : "Load more"}
+          </button>
         </div>
       )}
     </div>

@@ -81,6 +81,13 @@ export const api = {
 
   me: () => request<User>("/auth/me"),
 
+  updateProfile: (body: {
+    display_name?: string | null;
+    bio?: string | null;
+    avatar_url?: string | null;
+    region?: string;
+  }) => request<User>("/auth/me", { method: "PATCH", body: JSON.stringify(body) }),
+
   // ---- discover
   trending: (window: "day" | "week" = "week") =>
     request<FilmSummary[]>(`/discover/trending?window=${window}`),

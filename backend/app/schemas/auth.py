@@ -16,6 +16,15 @@ class UserLogin(BaseModel):
     password: str
 
 
+class UserUpdate(BaseModel):
+    """Editable profile fields. All optional; only provided fields change."""
+
+    display_name: str | None = Field(default=None, max_length=80)
+    bio: str | None = Field(default=None, max_length=500)
+    avatar_url: str | None = Field(default=None, max_length=500)
+    region: str | None = Field(default=None, min_length=2, max_length=2)
+
+
 class UserOut(BaseModel):
     id: int
     username: str

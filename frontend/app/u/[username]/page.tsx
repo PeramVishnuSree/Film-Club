@@ -18,12 +18,16 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
+const PAGE_SIZE = 30;
+
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activity, setActivity] = useState<FeedItem[] | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   // Re-fetch whenever the username changes or the viewer's auth state settles
   // (so is_following / is_self reflect the signed-in user).
@@ -33,6 +37,7 @@ export default function ProfilePage() {
     setProfile(null);
     setActivity(null);
     setNotFound(false);
+    setHasMore(true);
     api
       .profile(username)
       .then((p) => active && setProfile(p))
@@ -41,13 +46,29 @@ export default function ProfilePage() {
         if (e instanceof ApiError && e.status === 404) setNotFound(true);
       });
     api
-      .userActivity(username)
-      .then((a) => active && setActivity(a))
+      .userActivity(username, PAGE_SIZE, 0)
+      .then((a) => {
+        if (!active) return;
+        setActivity(a);
+        setHasMore(a.length === PAGE_SIZE);
+      })
       .catch(() => active && setActivity([]));
     return () => {
       active = false;
     };
   }, [username, user]);
+
+  async function loadMore() {
+    if (!activity || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await api.userActivity(username, PAGE_SIZE, activity.length);
+      setActivity([...activity, ...page]);
+      setHasMore(page.length === PAGE_SIZE);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   if (notFound) {
     return (
@@ -93,9 +114,12 @@ export default function ProfilePage() {
               <p className="text-sm text-white/40">@{profile.username}</p>
             </div>
             {profile.is_self ? (
-              <span className="rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/50">
-                This is you
-              </span>
+              <Link
+                href="/settings"
+                className="rounded-md border border-white/15 px-4 py-1.5 text-sm text-white/80 hover:border-white/40 hover:text-white"
+              >
+                Edit profile
+              </Link>
             ) : user ? (
               <FollowButton
                 username={profile.username}
@@ -137,6 +161,17 @@ export default function ProfilePage() {
           {activity.map((item) => (
             <ActivityItem key={item.id} item={item} />
           ))}
+        </div>
+      )}
+      {activity && activity.length > 0 && hasMore && (
+        <div className="mt-4 text-center">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="rounded-md border border-white/15 px-4 py-2 text-sm text-white/70 hover:border-white/40 hover:text-white disabled:opacity-60"
+          >
+            {loadingMore ? "Loading…" : "Load more"}
+          </button>
         </div>
       )}
     </div>
