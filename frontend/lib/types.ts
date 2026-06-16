@@ -147,6 +147,10 @@ export interface FeedItem {
   created_at: string;
 }
 
+export interface RecommendedFilm extends FilmSummary {
+  reason: string;
+}
+
 // ---- notifications
 export interface Notification {
   id: number;

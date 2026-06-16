@@ -11,6 +11,7 @@ import type {
   Profile,
   Provider,
   RankedFilm,
+  RecommendedFilm,
   Review,
   Token,
   User,
@@ -98,6 +99,9 @@ export const api = {
 
   top500: (limit = 100, offset = 0) =>
     request<RankedFilm[]>(`/discover/top500?limit=${limit}&offset=${offset}`),
+
+  recommendations: (limit = 20) =>
+    request<RecommendedFilm[]>(`/discover/recommendations?limit=${limit}`),
 
   // ---- films
   search: (q: string) =>

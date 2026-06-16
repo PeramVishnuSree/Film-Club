@@ -53,6 +53,9 @@ export default function Navbar() {
         </Link>
         {user && (
           <>
+            <Link href="/recommendations" className="text-sm text-white/70 hover:text-white">
+              For You
+            </Link>
             <Link href="/feed" className="text-sm text-white/70 hover:text-white">
               Feed
             </Link>

@@ -7,6 +7,8 @@ from app.db import get_session
 from app.models import Film, ListItem, User
 from app.schemas.discover import RankedFilm
 from app.schemas.film import FilmSummary
+from app.schemas.recommend import RecommendedFilm
+from app.services.recommend import get_recommendations
 from app.services.tmdb import TMDBClient
 from app.services.top500 import get_top_500_list, refresh_top_500
 
@@ -53,6 +55,16 @@ async def top500(
         )
         for rank, film in rows
     ]
+
+
+@router.get("/recommendations", response_model=list[RecommendedFilm])
+async def recommendations(
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+    limit: int = Query(default=20, ge=1, le=50),
+) -> list[RecommendedFilm]:
+    """Personalized picks from the people you follow, topped up with popular films."""
+    return await get_recommendations(session, user, limit)
 
 
 @router.post("/top500/refresh")
