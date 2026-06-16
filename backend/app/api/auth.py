@@ -3,6 +3,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.core.ratelimit import rate_limit
 from app.core.security import (
     create_access_token,
     create_email_verify_token,
@@ -30,8 +31,19 @@ from app.services.email import send_password_reset_email, send_verification_emai
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+# Per-IP brute-force / abuse limits on the sensitive flows. Generous enough not
+# to trip up real users, tight enough to make online guessing impractical.
+_login_limit = rate_limit(max_hits=10, window_seconds=60, scope="login")
+_signup_limit = rate_limit(max_hits=5, window_seconds=3600, scope="signup")
+_reset_limit = rate_limit(max_hits=5, window_seconds=3600, scope="pwreset")
 
-@router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/signup",
+    response_model=Token,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(_signup_limit)],
+)
 async def signup(payload: UserCreate, session: AsyncSession = Depends(get_session)) -> Token:
     existing = (
         await session.execute(
@@ -63,7 +75,7 @@ async def signup(payload: UserCreate, session: AsyncSession = Depends(get_sessio
     return Token(access_token=token, user=UserOut.model_validate(user))
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=Token, dependencies=[Depends(_login_limit)])
 async def login(payload: UserLogin, session: AsyncSession = Depends(get_session)) -> Token:
     user = (
         await session.execute(
@@ -111,7 +123,11 @@ async def update_me(
 # ---------------------------------------------------------------- password reset
 
 
-@router.post("/password-reset/request", response_model=MessageOut)
+@router.post(
+    "/password-reset/request",
+    response_model=MessageOut,
+    dependencies=[Depends(_reset_limit)],
+)
 async def request_password_reset(
     payload: PasswordResetRequest, session: AsyncSession = Depends(get_session)
 ) -> MessageOut:

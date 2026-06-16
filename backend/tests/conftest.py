@@ -22,10 +22,16 @@ from sqlalchemy.pool import NullPool
 # Importing the models package populates Base.metadata with every table.
 import app.models  # noqa: F401
 from app.api.deps import get_tmdb
+from app.config import settings
 from app.core.security import create_access_token
 from app.db import Base, get_session
 from app.main import app
 from tests.fake_tmdb import FakeTMDB
+
+# The auth rate limiter keeps per-process state that would otherwise carry over
+# between cases (and trip the limits after a handful of signups). Turn it off
+# for the suite; it has dedicated coverage of its own.
+settings.rate_limit_enabled = False
 
 TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",

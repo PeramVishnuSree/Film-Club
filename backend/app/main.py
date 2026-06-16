@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
@@ -18,6 +18,8 @@ from app.services.tmdb import TMDBClient
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Refuse to boot with insecure config (e.g. default SECRET_KEY) in production.
+    settings.validate_for_production()
     app.state.tmdb = TMDBClient()
     try:
         yield
@@ -25,7 +27,31 @@ async def lifespan(app: FastAPI):
         await app.state.tmdb.aclose()
 
 
-app = FastAPI(title=settings.app_name, lifespan=lifespan)
+# Hide interactive API docs / schema in production to avoid leaking the full
+# surface to anonymous visitors. They stay on in development.
+_docs_kwargs = (
+    {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    if settings.is_production
+    else {}
+)
+
+app = FastAPI(title=settings.app_name, lifespan=lifespan, **_docs_kwargs)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """Conservative hardening headers on every response. HSTS is only emitted
+    in production, where the app is expected to be served over HTTPS."""
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    if settings.is_production:
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=63072000; includeSubDomains"
+        )
+    return response
+
 
 app.add_middleware(
     CORSMiddleware,

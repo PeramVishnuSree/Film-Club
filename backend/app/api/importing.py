@@ -26,6 +26,10 @@ async def import_letterboxd(
     The kind is auto-detected from the header row. Films are resolved against
     TMDB by title and year; unmatched titles are returned for review.
     """
+    # Reject by the client-declared size first (cheap), then enforce again on the
+    # bytes actually read so a lying Content-Length can't slip a huge file through.
+    if file.size is not None and file.size > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large (max 5 MB)")
     raw = await file.read()
     if len(raw) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail="File too large (max 5 MB)")

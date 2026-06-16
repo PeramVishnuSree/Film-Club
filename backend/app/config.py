@@ -1,5 +1,10 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Secret-key values that must never be used in production. The defaults shipped
+# in code / .env.example / docker-compose fall into this set so a deploy that
+# forgot to set a real key fails fast instead of running forgeable JWTs.
+_INSECURE_SECRETS = {"dev-insecure-change-me", "change-me", "", "secret"}
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -37,9 +42,40 @@ class Settings(BaseSettings):
     password_reset_expire_minutes: int = 60
     email_verify_expire_minutes: int = 60 * 24  # 1 day
 
+    # In-process per-IP rate limiting on auth endpoints. Disabled in the test
+    # suite (state would otherwise leak across cases).
+    rate_limit_enabled: bool = True
+
     @property
     def email_enabled(self) -> bool:
         return bool(self.smtp_host)
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment.lower() in ("production", "prod")
+
+    def validate_for_production(self) -> None:
+        """Fail fast on insecure configuration when running in production.
+
+        Called at app startup. Catches the most dangerous misconfiguration —
+        deploying with the default JWT signing key, which would let anyone forge
+        access tokens for any account.
+        """
+        if not self.is_production:
+            return
+        problems: list[str] = []
+        if self.secret_key.strip() in _INSECURE_SECRETS or len(self.secret_key) < 32:
+            problems.append(
+                "SECRET_KEY is unset, default, or too short. Generate one with: "
+                'python -c "import secrets; print(secrets.token_hex(32))"'
+            )
+        if not (self.tmdb_access_token or self.tmdb_api_key):
+            problems.append("No TMDB credential set (TMDB_ACCESS_TOKEN or TMDB_API_KEY).")
+        if problems:
+            raise RuntimeError(
+                "Refusing to start in production with insecure configuration:\n  - "
+                + "\n  - ".join(problems)
+            )
 
 
 settings = Settings()

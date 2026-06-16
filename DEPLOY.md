@@ -43,7 +43,13 @@ backed by PostgreSQL. The repository includes Dockerfiles for each and a
    ```
 
    - Frontend: <http://localhost:3000>
-   - API + docs: <http://localhost:8000/docs>
+   - API: <http://localhost:8000> (interactive docs at `/docs` are enabled only
+     when `ENVIRONMENT` is not `production`).
+
+> **Fail-fast in production.** When `ENVIRONMENT=production`, the backend refuses
+> to start unless `SECRET_KEY` is a real value (not the default and ≥32 chars)
+> and a TMDB credential is set. This prevents accidentally shipping forgeable
+> JWTs. Generate a key with the command above.
 
 The backend container applies Alembic migrations on startup (see
 `backend/docker-entrypoint.sh`), retrying until Postgres is ready, so the first
@@ -61,7 +67,10 @@ named volume.
 | `TMDB_ACCESS_TOKEN` | TMDB v4 read token (preferred), sent as a Bearer header. |
 | `TMDB_API_KEY` | TMDB v3 key (alternative to the token). |
 | `CORS_ORIGINS` | JSON array of allowed frontend origins, e.g. `["https://filmclub.example"]`. |
-| `ENVIRONMENT` | `development` or `production`. |
+| `FRONTEND_URL` | Public URL of the frontend, used to build links inside emails. |
+| `RATE_LIMIT_ENABLED` | In-process per-IP throttling on auth endpoints (default `true`). |
+| `ENVIRONMENT` | `development` or `production`. In production: docs are hidden, HSTS is sent, and the config guard runs. |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_USE_TLS` / `EMAIL_FROM` | Transactional email. Leave `SMTP_HOST` blank to log emails to the console instead of sending. |
 
 ### Frontend (build-time)
 
@@ -83,7 +92,16 @@ named volume.
   hand: `docker compose run --rm backend alembic upgrade head`.
 - **Scaling.** The backend is stateless (JWT auth, no server-side sessions), so
   it scales horizontally behind a load balancer. Postgres is the only stateful
-  component.
+  component. Note the auth rate limiter keeps its counters in process memory, so
+  with N replicas the effective per-IP limit is ~N×; for a strict global limit,
+  enforce it at the reverse proxy / WAF or swap in a Redis-backed limiter.
+- **Workers.** The image runs a single Uvicorn process. To use more cores, run
+  multiple replicas behind the load balancer, or override the command to
+  `uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers N`.
+- **Security headers.** The API sends `X-Content-Type-Options`, `X-Frame-Options`,
+  `Referrer-Policy`, and (in production) `Strict-Transport-Security`. Terminate
+  TLS at the proxy so HSTS is meaningful; add a Content-Security-Policy there for
+  the frontend if desired.
 
 ## Building images individually
 
