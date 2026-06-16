@@ -194,6 +194,15 @@ export interface Stats {
   available_years: number[];
 }
 
+// ---- import
+export interface ImportResult {
+  kind: string;
+  rows: number;
+  imported: number;
+  skipped: number;
+  unmatched: string[];
+}
+
 // ---- notifications
 export interface Notification {
   id: number;

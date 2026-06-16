@@ -25,11 +25,17 @@ class TMDBClient:
     async def aclose(self) -> None:
         await self._client.aclose()
 
-    async def search_movies(self, query: str, page: int = 1) -> dict[str, Any]:
-        resp = await self._client.get(
-            "/search/movie",
-            params={"query": query, "page": page, "include_adult": "false"},
-        )
+    async def search_movies(
+        self, query: str, page: int = 1, year: int | None = None
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {
+            "query": query,
+            "page": page,
+            "include_adult": "false",
+        }
+        if year is not None:
+            params["primary_release_year"] = year
+        resp = await self._client.get("/search/movie", params=params)
         resp.raise_for_status()
         return resp.json()
 

@@ -4,6 +4,7 @@ import type {
   FilmDetail,
   FilmMeState,
   FilmSummary,
+  ImportResult,
   ListDetail,
   ListItem,
   ListSummary,
@@ -45,7 +46,13 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
-  if (options.body && !headers.has("Content-Type")) {
+  // Don't set a JSON content-type for FormData — the browser must supply the
+  // multipart boundary itself.
+  if (
+    options.body &&
+    !(options.body instanceof FormData) &&
+    !headers.has("Content-Type")
+  ) {
     headers.set("Content-Type", "application/json");
   }
   const token = getToken();
@@ -207,6 +214,16 @@ export const api = {
 
   stats: (year?: number) =>
     request<Stats>(`/me/stats${year ? `?year=${year}` : ""}`),
+
+  // ---- import
+  importLetterboxd: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return request<ImportResult>("/me/import/letterboxd", {
+      method: "POST",
+      body: form,
+    });
+  },
 
   // ---- notifications
   notifications: (limit = 30, offset = 0) =>

@@ -136,6 +136,16 @@ export default function SettingsPage() {
           </Link>
         </div>
       </form>
+
+      <div className="mt-10 border-t border-white/10 pt-6">
+        <h2 className="text-lg font-semibold">Import</h2>
+        <p className="mt-1 text-sm text-white/50">
+          Bring your history over from Letterboxd.{" "}
+          <Link href="/import" className="text-orange-400 hover:underline">
+            Import a CSV
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

@@ -7,6 +7,7 @@ from app.api.auth import router as auth_router
 from app.api.discover import router as discover_router
 from app.api.films import router as films_router
 from app.api.health import router as health_router
+from app.api.importing import router as importing_router
 from app.api.library import router as library_router
 from app.api.lists import router as lists_router
 from app.api.notifications import router as notifications_router
@@ -42,6 +43,7 @@ app.include_router(library_router)
 app.include_router(lists_router)
 app.include_router(social_router)
 app.include_router(notifications_router)
+app.include_router(importing_router)
 
 
 @app.get("/")
