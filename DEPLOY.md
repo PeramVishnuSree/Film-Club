@@ -78,37 +78,72 @@ named volume.
 | --- | --- |
 | `NEXT_PUBLIC_API_URL` | Base URL the browser uses to reach the API. Baked into the client bundle at build time, so rebuild the image when it changes. |
 
-## Free-tier deploy on Render (no credit card)
+## Free-tier production deploy (no credit card)
 
-The repo ships a [`render.yaml`](./render.yaml) Blueprint that provisions the
-whole stack on Render's free plans — a free Postgres instance and two free
-Docker web services. No payment method is required.
+For a real deploy that avoids the worst free-tier pain (cold starts, a database
+that expires), put each tier on the platform that serves it best:
 
-1. Push this repository to GitHub (already the case if you cloned it from your
-   own remote).
-2. In the [Render dashboard](https://dashboard.render.com), click
-   **New + → Blueprint** and select this repository. Render reads `render.yaml`
-   and shows the three resources it will create.
-3. When prompted, paste your **TMDB v4 access token** (the only `sync: false`
-   value). `SECRET_KEY` is generated automatically; `DATABASE_URL` is wired to
-   the managed database; CORS and API URLs are pre-filled.
-4. Click **Apply**. The backend applies migrations on first boot and the
-   frontend builds with the API URL baked in.
+| Tier | Platform | Why |
+| --- | --- | --- |
+| Frontend (Next.js) | **Vercel** | Never sleeps, global CDN, built for Next.js |
+| Database (Postgres) | **Neon** | Free **and persistent** — no 30-day expiry |
+| Backend (FastAPI) | **Render** | Docker web service, kept warm by a cron ping |
+
+None of these require a payment method.
+
+### 1. Database — Neon
+
+1. Create a project at [neon.tech](https://neon.tech) and copy the connection
+   string (looks like `postgres://user:pass@ep-xxx.neon.tech/neondb?sslmode=require`).
+2. You'll paste this as `DATABASE_URL` on the backend (next step). The app
+   rewrites the scheme to `postgresql+asyncpg://` and translates `sslmode` to
+   asyncpg's `ssl` automatically (see `app/config.py`), so paste it as-is.
+
+### 2. Backend — Render
+
+The repo ships a [`render.yaml`](./render.yaml) Blueprint for the API only.
+
+1. In the [Render dashboard](https://dashboard.render.com): **New + → Blueprint**,
+   select this repo. Render reads `render.yaml` and shows the `filmclub-api`
+   service.
+2. When prompted for the `sync: false` values:
+   - `DATABASE_URL` → your Neon connection string
+   - `TMDB_ACCESS_TOKEN` → your TMDB v4 read token
+   - `CORS_ORIGINS` → your Vercel app URL (e.g. `https://film-club.vercel.app`)
+   - `FRONTEND_URL` → the same Vercel app URL
+   `SECRET_KEY` is generated automatically.
+3. **Apply.** The backend applies migrations to Neon on first boot and starts.
+   Confirm `https://filmclub-api.onrender.com/health` returns `{"status":"healthy"}`.
+
+> If the Vercel URL isn't known yet, set `CORS_ORIGINS`/`FRONTEND_URL` after
+> step 3 in the service's **Environment** tab and let it redeploy.
+
+### 3. Frontend — Vercel
+
+1. At [vercel.com](https://vercel.com), **Add New → Project**, import this repo.
+2. Set **Root Directory** to `frontend`. Framework preset auto-detects Next.js.
+3. Add an environment variable **`NEXT_PUBLIC_API_URL`** =
+   `https://filmclub-api.onrender.com` (baked into the client bundle at build
+   time and used to scope the frontend's CSP `connect-src`).
+4. **Deploy.** Vercel gives you the app URL — make sure it matches what you put
+   in the backend's `CORS_ORIGINS`/`FRONTEND_URL`.
+
+### 4. Keep the backend warm
+
+Render free services spin down after ~15 min idle (~50s cold start). The
+included [`.github/workflows/keep-warm.yml`](./.github/workflows/keep-warm.yml)
+pings `/health` every ~10 minutes to prevent that. It runs automatically on
+GitHub Actions (free; unlimited minutes on public repos). A free external
+pinger like cron-job.org or UptimeRobot is an equivalent alternative.
 
 Notes:
 
-- **Service names must be globally unique.** The Blueprint hardcodes
-  `https://filmclub-api.onrender.com` and `https://filmclub-web.onrender.com`.
-  If either name is taken, Render appends a suffix; update `CORS_ORIGINS`,
-  `FRONTEND_URL` (backend) and `NEXT_PUBLIC_API_URL` (frontend) to the real
-  URLs shown in the dashboard, then redeploy.
-- **Free database expiry.** Render's free Postgres is deleted after ~30 days.
-  Back up or upgrade before then if you want to keep the data.
-- **Cold starts.** Free web services spin down after inactivity and take a few
-  seconds to wake on the next request.
-- **DB URL scheme.** Render hands out `postgres://…` URLs; the app rewrites
-  these to `postgresql+asyncpg://…` automatically (see `app/config.py`), so the
-  same value works for both the server and Alembic.
+- **One always-on backend fits the free budget.** Render gives 750 instance-
+  hours/month; a single warm service uses ~744. Don't keep a second free web
+  service always-on or you'll exceed it.
+- **Service name uniqueness.** `render.yaml` and the keep-warm workflow assume
+  `filmclub-api.onrender.com`. If that name is taken, Render appends a suffix —
+  update the workflow URL and `NEXT_PUBLIC_API_URL` to match.
 
 ## Production notes
 
