@@ -1,6 +1,6 @@
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, over, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_optional_user, get_tmdb
@@ -111,6 +111,100 @@ async def _summary(
         like_count=like_count,
         liked=liked,
     )
+
+
+async def _summaries(
+    session: AsyncSession,
+    lists: list[List],
+    owner: User | None,
+    viewer: User | None,
+) -> list[ListSummary]:
+    """Build summaries for many lists in a fixed number of queries instead of
+    O(n) per list. Used by the list-collection endpoints."""
+    if not lists:
+        return []
+    ids = [lst.id for lst in lists]
+    owner_card = UserCard.model_validate(owner) if owner else None
+
+    # Item counts per list (one grouped query).
+    counts = dict(
+        (
+            await session.execute(
+                select(ListItem.list_id, func.count(ListItem.id))
+                .where(ListItem.list_id.in_(ids))
+                .group_by(ListItem.list_id)
+            )
+        ).all()
+    )
+
+    # First few poster paths per list via a window function (one query). The
+    # row_number is computed in a subquery so we can filter it in SQL — window
+    # functions aren't allowed in a WHERE on the same query level.
+    rn = over(
+        func.row_number(),
+        partition_by=ListItem.list_id,
+        order_by=func.coalesce(ListItem.rank, ListItem.id).asc(),
+    ).label("rn")
+    ranked = (
+        select(ListItem.list_id.label("list_id"), Film.poster_path.label("poster_path"), rn)
+        .join(Film, Film.id == ListItem.film_id)
+        .where(ListItem.list_id.in_(ids), Film.poster_path.isnot(None))
+        .subquery()
+    )
+    poster_rows = (
+        await session.execute(
+            select(ranked.c.list_id, ranked.c.poster_path)
+            .where(ranked.c.rn <= PREVIEW_COUNT)
+            .order_by(ranked.c.list_id, ranked.c.rn)
+        )
+    ).all()
+    posters: dict[int, list[str]] = {}
+    for list_id, poster_path in poster_rows:
+        posters.setdefault(list_id, []).append(poster_path)
+
+    # Like counts per list (one grouped query).
+    like_counts = dict(
+        (
+            await session.execute(
+                select(ListLike.list_id, func.count(ListLike.id))
+                .where(ListLike.list_id.in_(ids))
+                .group_by(ListLike.list_id)
+            )
+        ).all()
+    )
+
+    # Which of these the viewer liked (one query; empty when logged out).
+    liked_ids: set[int] = set()
+    if viewer is not None:
+        liked_ids = set(
+            (
+                await session.execute(
+                    select(ListLike.list_id).where(
+                        ListLike.user_id == viewer.id, ListLike.list_id.in_(ids)
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    return [
+        ListSummary(
+            id=lst.id,
+            title=lst.title,
+            description=lst.description,
+            is_ranked=lst.is_ranked,
+            is_public=lst.is_public,
+            is_system=lst.is_system,
+            item_count=counts.get(lst.id, 0),
+            owner=owner_card,
+            created_at=lst.created_at,
+            preview_posters=posters.get(lst.id, []),
+            like_count=like_counts.get(lst.id, 0),
+            liked=lst.id in liked_ids,
+        )
+        for lst in lists
+    ]
 
 
 async def _detail(
@@ -442,7 +536,7 @@ async def my_lists(
             .order_by(List.id.desc())
         )
     ).scalars().all()
-    return [await _summary(session, lst, user, user) for lst in lists]
+    return await _summaries(session, list(lists), user, user)
 
 
 @router.get("/users/{username}/lists", response_model=list[ListSummary])
@@ -467,4 +561,4 @@ async def user_lists(
             query.order_by(List.id.desc()).limit(limit).offset(offset)
         )
     ).scalars().all()
-    return [await _summary(session, lst, owner, viewer) for lst in lists]
+    return await _summaries(session, list(lists), owner, viewer)

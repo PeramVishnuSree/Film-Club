@@ -78,6 +78,38 @@ named volume.
 | --- | --- |
 | `NEXT_PUBLIC_API_URL` | Base URL the browser uses to reach the API. Baked into the client bundle at build time, so rebuild the image when it changes. |
 
+## Free-tier deploy on Render (no credit card)
+
+The repo ships a [`render.yaml`](./render.yaml) Blueprint that provisions the
+whole stack on Render's free plans — a free Postgres instance and two free
+Docker web services. No payment method is required.
+
+1. Push this repository to GitHub (already the case if you cloned it from your
+   own remote).
+2. In the [Render dashboard](https://dashboard.render.com), click
+   **New + → Blueprint** and select this repository. Render reads `render.yaml`
+   and shows the three resources it will create.
+3. When prompted, paste your **TMDB v4 access token** (the only `sync: false`
+   value). `SECRET_KEY` is generated automatically; `DATABASE_URL` is wired to
+   the managed database; CORS and API URLs are pre-filled.
+4. Click **Apply**. The backend applies migrations on first boot and the
+   frontend builds with the API URL baked in.
+
+Notes:
+
+- **Service names must be globally unique.** The Blueprint hardcodes
+  `https://filmclub-api.onrender.com` and `https://filmclub-web.onrender.com`.
+  If either name is taken, Render appends a suffix; update `CORS_ORIGINS`,
+  `FRONTEND_URL` (backend) and `NEXT_PUBLIC_API_URL` (frontend) to the real
+  URLs shown in the dashboard, then redeploy.
+- **Free database expiry.** Render's free Postgres is deleted after ~30 days.
+  Back up or upgrade before then if you want to keep the data.
+- **Cold starts.** Free web services spin down after inactivity and take a few
+  seconds to wake on the next request.
+- **DB URL scheme.** Render hands out `postgres://…` URLs; the app rewrites
+  these to `postgresql+asyncpg://…` automatically (see `app/config.py`), so the
+  same value works for both the server and Alembic.
+
 ## Production notes
 
 - **HTTPS / reverse proxy.** Put a TLS-terminating proxy (Caddy, nginx,
@@ -85,7 +117,9 @@ named volume.
   `NEXT_PUBLIC_API_URL` and `CORS_ORIGINS` at the public HTTPS URLs.
 - **Managed Postgres.** To use a hosted database (Neon, Supabase, RDS), drop the
   `db` service and set `DATABASE_URL` on the backend to the managed connection
-  string. Keep the `postgresql+asyncpg://` driver prefix.
+  string. A `postgres://` or `postgresql://` URL is rewritten to the
+  `postgresql+asyncpg://` driver automatically, so you can paste the provider's
+  URL as-is.
 - **Secrets.** Never commit `.env`. Use your platform's secret store for
   `SECRET_KEY`, `TMDB_*`, and the database password.
 - **Migrations.** They run automatically at container start. To run them by
@@ -100,8 +134,9 @@ named volume.
   `uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers N`.
 - **Security headers.** The API sends `X-Content-Type-Options`, `X-Frame-Options`,
   `Referrer-Policy`, and (in production) `Strict-Transport-Security`. Terminate
-  TLS at the proxy so HSTS is meaningful; add a Content-Security-Policy there for
-  the frontend if desired.
+  TLS at the proxy so HSTS is meaningful. The Next.js frontend sends its own
+  Content-Security-Policy and related headers (see `frontend/next.config.ts`),
+  with `connect-src` scoped to `NEXT_PUBLIC_API_URL`.
 
 ## Building images individually
 

@@ -94,6 +94,9 @@ export const api = {
 
   me: () => request<User>("/auth/me"),
 
+  logoutAll: () =>
+    request<{ detail: string }>("/auth/logout-all", { method: "POST" }),
+
   requestPasswordReset: (email: string) =>
     request<{ detail: string }>("/auth/password-reset/request", {
       method: "POST",

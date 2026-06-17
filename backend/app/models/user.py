@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Boolean, ForeignKey, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base, TimestampMixin
@@ -22,6 +22,12 @@ class User(Base, TimestampMixin):
     # Set once the user confirms ownership of their email address.
     email_verified: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, server_default="false"
+    )
+    # Bumped to invalidate all outstanding access tokens (e.g. on password reset
+    # or an explicit "log out everywhere"). Embedded in the JWT and checked on
+    # every authenticated request.
+    token_version: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False, server_default="0"
     )
 
 

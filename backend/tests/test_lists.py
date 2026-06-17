@@ -89,3 +89,32 @@ async def test_list_likes(client):
 
 async def test_list_endpoints_require_auth(client):
     assert (await client.post("/lists", json={"title": "x"})).status_code == 401
+
+
+async def test_my_lists_batched_metadata(client):
+    """The batched collection query returns correct counts, posters, and like
+    state across multiple lists at once."""
+    owner = await register_user(client, username="batcher")
+    fan = await register_user(client, username="batchfan")
+    h = owner["headers"]
+
+    a = (await client.post("/lists", headers=h, json={"title": "A"})).json()["id"]
+    b = (await client.post("/lists", headers=h, json={"title": "B"})).json()["id"]
+    # A has two films, B has one.
+    for tmdb_id in (550, 680):
+        await client.post(f"/lists/{a}/items", headers=h, json={"tmdb_id": tmdb_id})
+    await client.post(f"/lists/{b}/items", headers=h, json={"tmdb_id": 550})
+    # Fan likes only B.
+    await client.post(f"/lists/{b}/like", headers=fan["headers"])
+
+    resp = await client.get(f"/users/{owner['username']}/lists", headers=fan["headers"])
+    assert resp.status_code == 200
+    by_id = {l["id"]: l for l in resp.json()}
+
+    assert by_id[a]["item_count"] == 2
+    assert by_id[b]["item_count"] == 1
+    # Posters present and capped at the preview count.
+    assert len(by_id[a]["preview_posters"]) == 2
+    assert by_id[a]["liked"] is False
+    assert by_id[b]["liked"] is True
+    assert by_id[b]["like_count"] == 1

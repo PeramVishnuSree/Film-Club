@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Secret-key values that must never be used in production. The defaults shipped
@@ -45,6 +46,25 @@ class Settings(BaseSettings):
     # In-process per-IP rate limiting on auth endpoints. Disabled in the test
     # suite (state would otherwise leak across cases).
     rate_limit_enabled: bool = True
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _normalize_database_url(cls, value: str) -> str:
+        """Coerce cloud-provider DSNs to the async driver this app uses.
+
+        Managed Postgres (Render, Heroku, Railway, …) hands out URLs like
+        ``postgres://…`` or ``postgresql://…``. SQLAlchemy's async engine and
+        Alembic both need the ``postgresql+asyncpg://`` scheme, so rewrite it
+        here once — covering both the app engine and migrations, which read
+        ``settings.database_url``.
+        """
+        if not isinstance(value, str) or not value:
+            return value
+        if value.startswith("postgres://"):
+            return "postgresql+asyncpg://" + value[len("postgres://") :]
+        if value.startswith("postgresql://"):
+            return "postgresql+asyncpg://" + value[len("postgresql://") :]
+        return value
 
     @property
     def email_enabled(self) -> bool:

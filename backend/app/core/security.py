@@ -23,11 +23,13 @@ def verify_password(password: str, hashed: str) -> bool:
         return False
 
 
-def create_access_token(subject: str | int) -> str:
+def create_access_token(subject: str | int, token_version: int = 0) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.access_token_expire_minutes
     )
-    payload = {"sub": str(subject), "exp": expire}
+    # "ver" pins the token to the user's current token_version; bumping that
+    # column server-side invalidates every token issued before the bump.
+    payload = {"sub": str(subject), "ver": token_version, "exp": expire}
     return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
 
 

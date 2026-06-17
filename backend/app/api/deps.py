@@ -38,6 +38,11 @@ async def get_current_user(
     user = await session.get(User, user_id)
     if user is None:
         raise _credentials_error
+    # Reject tokens minted before the user's token_version was last bumped
+    # (password reset / log-out-everywhere). Tokens from before this field
+    # existed carry no "ver" and default to 0, matching a fresh account.
+    if int(payload.get("ver", 0)) != user.token_version:
+        raise _credentials_error
     return user
 
 
@@ -55,4 +60,7 @@ async def get_optional_user(
         user_id = int(payload["sub"])
     except (jwt.PyJWTError, KeyError, ValueError):
         return None
-    return await session.get(User, user_id)
+    user = await session.get(User, user_id)
+    if user is not None and int(payload.get("ver", 0)) != user.token_version:
+        return None  # stale token → treat as anonymous
+    return user

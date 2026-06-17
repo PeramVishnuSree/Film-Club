@@ -71,7 +71,7 @@ async def signup(payload: UserCreate, session: AsyncSession = Depends(get_sessio
     # Kick off email verification (logged to console when SMTP isn't configured).
     await send_verification_email(user.email, create_email_verify_token(user.id))
 
-    token = create_access_token(user.id)
+    token = create_access_token(user.id, user.token_version)
     return Token(access_token=token, user=UserOut.model_validate(user))
 
 
@@ -91,13 +91,26 @@ async def login(payload: UserLogin, session: AsyncSession = Depends(get_session)
             detail="Incorrect username/email or password",
         )
 
-    token = create_access_token(user.id)
+    token = create_access_token(user.id, user.token_version)
     return Token(access_token=token, user=UserOut.model_validate(user))
 
 
 @router.get("/me", response_model=UserOut)
 async def me(current_user: User = Depends(get_current_user)) -> UserOut:
     return UserOut.model_validate(current_user)
+
+
+@router.post("/logout-all", response_model=MessageOut)
+async def logout_all(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> MessageOut:
+    """Revoke every outstanding session for the current user by bumping the
+    token version. The caller's current token is invalidated too, so the client
+    should drop it and sign in again."""
+    current_user.token_version += 1
+    await session.commit()
+    return MessageOut(detail="Signed out of all sessions.")
 
 
 @router.patch("/me", response_model=UserOut)
@@ -156,8 +169,11 @@ async def confirm_password_reset(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="This reset link is invalid or has expired.",
         )
-    # Changing the hash invalidates the token (it was signed against the old one).
+    # Changing the hash invalidates the reset token (signed against the old one)
+    # and bumping token_version invalidates any access tokens from active
+    # sessions — a reset locks out whoever might have had the account.
     user.hashed_password = hash_password(payload.new_password)
+    user.token_version += 1
     await session.commit()
     return MessageOut(detail="Your password has been reset. You can now log in.")
 

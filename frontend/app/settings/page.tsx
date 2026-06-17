@@ -7,7 +7,7 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 export default function SettingsPage() {
-  const { user, loading, setUser } = useAuth();
+  const { user, loading, setUser, logout } = useAuth();
   const router = useRouter();
 
   const [displayName, setDisplayName] = useState("");
@@ -19,6 +19,19 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [verifyMsg, setVerifyMsg] = useState<string | null>(null);
   const [verifyBusy, setVerifyBusy] = useState(false);
+  const [signOutBusy, setSignOutBusy] = useState(false);
+
+  async function onSignOutEverywhere() {
+    setSignOutBusy(true);
+    try {
+      await api.logoutAll();
+    } catch {
+      /* even if the call fails, drop the local token below */
+    } finally {
+      logout();
+      router.push("/login");
+    }
+  }
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
@@ -184,6 +197,21 @@ export default function SettingsPage() {
             Import a CSV
           </Link>
         </p>
+      </div>
+
+      <div className="mt-10 border-t border-white/10 pt-6">
+        <h2 className="text-lg font-semibold">Security</h2>
+        <p className="mt-1 text-sm text-white/50">
+          Sign out of every device. Use this if you reset your password or think
+          a session may be compromised.
+        </p>
+        <button
+          onClick={onSignOutEverywhere}
+          disabled={signOutBusy}
+          className="mt-3 rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/80 hover:bg-white/5 disabled:opacity-50"
+        >
+          {signOutBusy ? "Signing out…" : "Sign out of all devices"}
+        </button>
       </div>
     </div>
   );
