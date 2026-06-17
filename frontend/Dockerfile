@@ -20,9 +20,10 @@ RUN npm run build
 # ---- runner: minimal production image ----
 FROM node:20-slim AS runner
 WORKDIR /app
+# Don't hardcode PORT: the standalone server reads $PORT at runtime (Render and
+# other platforms inject it) and defaults to 3000 locally when unset.
 ENV NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1 \
-    PORT=3000
+    NEXT_TELEMETRY_DISABLED=1
 
 RUN useradd --create-home --uid 1000 nextjs
 USER nextjs

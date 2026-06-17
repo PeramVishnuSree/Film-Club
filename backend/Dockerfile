@@ -28,5 +28,8 @@ USER appuser
 EXPOSE 8000
 
 # The entrypoint applies migrations, then execs the given command.
+# Bind to $PORT when the platform provides one (Render, Heroku, …) and fall
+# back to 8000 for local runs / docker-compose. `exec` keeps uvicorn as PID 1
+# inside the shell so it receives SIGTERM for graceful shutdown.
 ENTRYPOINT ["./docker-entrypoint.sh"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
