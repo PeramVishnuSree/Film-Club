@@ -55,6 +55,11 @@ services:
     dockerfilePath: ./frontend/Dockerfile
     dockerContext: ./frontend
     envVars:
+      # Pin the port so Render routes to the same port the standalone server
+      # binds. Without a healthCheckPath, Render relies on port detection, and
+      # the image's EXPOSE 3000 vs the injected $PORT can mismatch → 502.
+      - key: PORT
+        value: 3000
       # Baked into the client bundle at build time. Render exposes service env
       # vars as Docker build args, and the frontend Dockerfile declares a
       # matching `ARG NEXT_PUBLIC_API_URL`.
