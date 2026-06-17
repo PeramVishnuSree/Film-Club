@@ -25,13 +25,14 @@ WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1
 
-RUN useradd --create-home --uid 1000 nextjs
-USER nextjs
+# The node base image already ships a non-root `node` user (UID 1000); reuse it
+# rather than creating another user at the same UID (which collides).
+USER node
 
 # The standalone bundle includes a minimal server + traced node_modules.
-COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nextjs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nextjs /app/public ./public
+COPY --from=builder --chown=node:node /app/.next/standalone ./
+COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node /app/public ./public
 
 EXPOSE 3000
 CMD ["node", "server.js"]
