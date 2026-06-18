@@ -162,6 +162,10 @@ class FakeTMDB:
             raise httpx.HTTPStatusError("Not Found", request=request, response=response)
         return movie
 
+    async def get_movie_with_providers(self, tmdb_id: int) -> dict[str, Any]:
+        # Same payload as get_movie for the fake; production omits credits/keywords.
+        return await self.get_movie(tmdb_id)
+
     async def search_movies(
         self, query: str, page: int = 1, year: int | None = None
     ) -> dict[str, Any]:

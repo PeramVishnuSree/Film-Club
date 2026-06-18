@@ -47,6 +47,20 @@ class TMDBClient:
         resp.raise_for_status()
         return resp.json()
 
+    async def get_movie_with_providers(self, tmdb_id: int) -> dict[str, Any]:
+        """Film summary + watch providers only — no credits/keywords.
+
+        Backs the poster-hover provider preview, which only needs streaming
+        availability. Skipping the credits/keywords payload (and the large
+        per-person DB sync they trigger) keeps the hover lookup fast.
+        """
+        resp = await self._client.get(
+            f"/movie/{tmdb_id}",
+            params={"append_to_response": "watch/providers"},
+        )
+        resp.raise_for_status()
+        return resp.json()
+
     async def trending_movies(self, window: str = "week") -> dict[str, Any]:
         resp = await self._client.get(f"/trending/movie/{window}")
         resp.raise_for_status()

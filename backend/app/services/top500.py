@@ -1,9 +1,14 @@
+import logging
+
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db import async_session
 from app.models import List, ListItem
 from app.services.film_cache import upsert_film_summary
 from app.services.tmdb import TMDBClient
+
+logger = logging.getLogger(__name__)
 
 TOP_500_TITLE = "Top 500"
 TOP_500_DESCRIPTION = "The 500 highest-rated films, generated from TMDB ratings."
@@ -74,3 +79,33 @@ async def refresh_top_500(session: AsyncSession, client: TMDBClient) -> int:
 
     await session.commit()
     return rank
+
+
+async def seed_top_500_if_empty(client: TMDBClient) -> None:
+    """Build the Top 500 once if it has never been generated.
+
+    Runs in the background at startup so a fresh deploy (new, empty database)
+    serves a populated Top 500 without anyone manually hitting the refresh
+    endpoint. No-ops once the list has items, so it costs nothing on later
+    boots. Builds in a single transaction (committed only at the end), so a
+    crash or shutdown mid-build leaves nothing partial — it simply retries next
+    boot. Failures are logged, never raised, so they can't block startup.
+    """
+    try:
+        async with async_session() as session:
+            film_list = await get_top_500_list(session)
+            if film_list is not None:
+                has_items = (
+                    await session.execute(
+                        select(ListItem.id)
+                        .where(ListItem.list_id == film_list.id)
+                        .limit(1)
+                    )
+                ).first()
+                if has_items:
+                    return
+            logger.info("Top 500 is empty; generating from TMDB…")
+            count = await refresh_top_500(session, client)
+            logger.info("Top 500 generated with %d films", count)
+    except Exception:  # pragma: no cover - best-effort background seed
+        logger.exception("Top 500 seed failed; will retry on next startup")

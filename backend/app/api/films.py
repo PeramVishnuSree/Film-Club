@@ -22,7 +22,7 @@ from app.schemas.film import (
     NamedRef,
     ProviderOut,
 )
-from app.services.film_cache import get_or_cache_film
+from app.services.film_cache import get_or_cache_film, get_or_cache_providers
 from app.services.tmdb import TMDBClient
 
 router = APIRouter(prefix="/films", tags=["films"])
@@ -63,19 +63,12 @@ async def get_film_providers(
 ) -> list[ProviderOut]:
     """Lightweight watch-provider lookup used for poster hover previews."""
     try:
-        film = await get_or_cache_film(session, tmdb, tmdb_id, region)
+        providers = await get_or_cache_providers(session, tmdb, tmdb_id, region)
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == 404:
             raise HTTPException(status_code=404, detail="Film not found on TMDB") from exc
         raise HTTPException(status_code=502, detail="TMDB request failed") from exc
 
-    providers = (
-        await session.execute(
-            select(FilmWatchProvider)
-            .where(FilmWatchProvider.film_id == film.id)
-            .where(FilmWatchProvider.region == region)
-        )
-    ).scalars().all()
     return [
         ProviderOut(
             provider_id=p.provider_id,

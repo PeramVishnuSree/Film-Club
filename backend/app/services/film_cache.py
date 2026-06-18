@@ -29,6 +29,7 @@ CREW_JOBS = {
 }
 MAX_CAST = 20
 CACHE_TTL = timedelta(hours=24)
+PROVIDERS_TTL = timedelta(hours=24)
 
 
 def _parse_date(value: str | None) -> date | None:
@@ -111,6 +112,66 @@ async def get_or_cache_film(
     await session.commit()
     await session.refresh(film)
     return film
+
+
+def _providers_fresh(rows: list[FilmWatchProvider]) -> bool:
+    """True only if every cached provider row is within the TTL."""
+    for row in rows:
+        synced = row.synced_at
+        if synced is None:
+            return False
+        if synced.tzinfo is None:
+            synced = synced.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) - synced >= PROVIDERS_TTL:
+            return False
+    return True
+
+
+async def _providers_for(
+    session: AsyncSession, film_id: int, region: str
+) -> list[FilmWatchProvider]:
+    return list(
+        (
+            await session.execute(
+                select(FilmWatchProvider)
+                .where(FilmWatchProvider.film_id == film_id)
+                .where(FilmWatchProvider.region == region)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+
+async def get_or_cache_providers(
+    session: AsyncSession, client: TMDBClient, tmdb_id: int, region: str = "US"
+) -> list[FilmWatchProvider]:
+    """Fast path for the poster-hover provider preview.
+
+    Unlike ``get_or_cache_film`` this never fetches or writes credits, keywords,
+    or cast/crew — it pulls only the film summary + watch providers in a single
+    TMDB call and writes a couple of rows, so a cache miss is seconds, not the
+    ~13s the full-detail populate took. Films cached here keep
+    ``tmdb_synced_at`` unset, so a later full detail view still enriches them.
+    """
+    film = (
+        await session.execute(select(Film).where(Film.tmdb_id == tmdb_id))
+    ).scalar_one_or_none()
+
+    if film is not None:
+        rows = await _providers_for(session, film.id, region)
+        if rows and _providers_fresh(rows):
+            return rows
+
+    data = await client.get_movie_with_providers(tmdb_id)
+    if film is None:
+        film_id = await upsert_film_summary(session, data)
+        film = (
+            await session.execute(select(Film).where(Film.id == film_id))
+        ).scalar_one()
+    await _sync_watch_providers(session, film, data, region)
+    await session.commit()
+    return await _providers_for(session, film.id, region)
 
 
 async def _upsert_film(session: AsyncSession, film: Film | None, data: dict[str, Any]) -> Film:
@@ -232,11 +293,19 @@ async def _sync_watch_providers(
         .where(FilmWatchProvider.region == region)
     )
     now = datetime.now(timezone.utc)
+    rows: list[dict[str, Any]] = []
+    seen: set[tuple[int, str]] = set()
     for offer_type in ("flatrate", "rent", "buy"):
         for provider in region_data.get(offer_type, []):
-            await session.execute(
-                pg_insert(FilmWatchProvider)
-                .values(
+            # The unique key is (film, region, provider, offer_type); a provider
+            # can appear under several offer types. Dedupe on (provider, offer)
+            # so a single batched INSERT has no in-statement conflicts.
+            key = (provider["provider_id"], offer_type)
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append(
+                dict(
                     film_id=film.id,
                     region=region,
                     provider_id=provider["provider_id"],
@@ -245,5 +314,9 @@ async def _sync_watch_providers(
                     offer_type=offer_type,
                     synced_at=now,
                 )
-                .on_conflict_do_nothing()
             )
+    if rows:
+        # One round-trip instead of one per provider.
+        await session.execute(
+            pg_insert(FilmWatchProvider).values(rows).on_conflict_do_nothing()
+        )
