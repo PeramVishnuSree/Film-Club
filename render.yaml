@@ -17,6 +17,14 @@ services:
     name: filmclub-api
     runtime: docker
     plan: free
+    # Colocate the backend with the Neon database (AWS us-east-1, N. Virginia).
+    # Every request touches the DB, often several times; keeping them in the
+    # same region turns cross-country round trips (~60-80ms each) into
+    # same-region hops (~1ms), which is the cheapest latency win available.
+    # NOTE: Render fixes a service's region at creation — changing this value
+    # on an existing service does nothing. To apply it, delete and recreate the
+    # service (the Neon data persists, so nothing is lost).
+    region: virginia
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     healthCheckPath: /health
