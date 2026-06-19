@@ -337,9 +337,23 @@ dashboard setting — no code change needed.)
 
 ## 10. What's left / nice-to-haves
 
-- **Branch protection** on the code repository, so changes must pass the
-  automated checks before reaching the live site (approved, ready to switch
-  on).
+Done since the first cut:
+
+- **Branch protection** on the code repository is now switched on — changes
+  must pass the automated checks before reaching the live site.
+
+Planned next (the backlog as it stands):
+
+- **More ways to filter the catalogue** — by genre, by decade, by cast member,
+  and by streaming service. The data we already cache (genres, credits, watch
+  providers) makes these natural next steps rather than new plumbing.
+- **Smooth out the remaining cold-start** — even with the keep-warm ping, the
+  very first visit after an idle stretch is still slow to paint posters and
+  artwork. Worth profiling image loading and the first-request path so a new
+  visitor never waits.
+- **Exercise the accounts/login path under real use** — sign-up, sign-in, and
+  watching how the database behaves as real users and their libraries accumulate
+  (connection limits on the free database, query performance as rows grow).
 - **Cleanup:** delete the now-unused old Render frontend and database services
   so they don't count against the free budget.
 - **Optional polish:** a custom domain, and analytics — both available free,
